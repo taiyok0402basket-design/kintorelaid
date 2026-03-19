@@ -691,9 +691,17 @@ function goBack(){
 
 // LOGIN
 function showProfileForm(){
+  // ログイン画面を確実に最前面に表示
+  document.querySelectorAll('.scr').forEach(function(s){
+    if(s.id!=='s-login') s.classList.add('off');
+  });
+  var login=document.getElementById('s-login');
+  login.classList.remove('off','back');
+  cur='login';
+  // フォームに切り替え
   document.getElementById('login-view').style.display='none';
   document.getElementById('profile-form').style.display='block';
-  // 先頭にスクロールしてボタンが見えるようにする
+  // 先頭にスクロール
   var scroll=document.querySelector('#s-login .scroll');
   if(scroll)scroll.scrollTop=0;
 }
