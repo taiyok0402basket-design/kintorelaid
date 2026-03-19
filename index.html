@@ -11,9 +11,10 @@
 html,body{height:100%;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--tx)}
 body{display:flex;justify-content:center}
 #app{width:100%;max-width:430px;min-height:100vh;background:var(--bg);position:relative;overflow:hidden}
-.scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transition:transform .28s cubic-bezier(.4,0,.2,1),opacity .28s}
-.scr.off{transform:translateX(100%);opacity:0;pointer-events:none}
-.scr.back{transform:translateX(-30%);opacity:0;pointer-events:none}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transition:transform .28s cubic-bezier(.4,0,.2,1),opacity .28s;z-index:1}
+.scr.off{transform:translateX(100%);opacity:0;pointer-events:none;z-index:0}
+.scr.back{transform:translateX(-30%);opacity:0;pointer-events:none;z-index:0}
+#s-login{z-index:10}
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
 .card{background:var(--ca);border-radius:var(--r);border:.5px solid var(--bd)}
 .topbar{background:var(--ca);border-bottom:.5px solid var(--bd);padding:14px 16px 12px;flex-shrink:0}
