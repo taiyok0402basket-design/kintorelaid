@@ -259,11 +259,11 @@ body{display:flex;justify-content:center}
   <div style="height:.5px;background:var(--bd);margin:0 28px"></div>
   <div class="login-btns">
     <div class="login-btn-t">はじめる</div>
-    <button class="btn-google" id="btn-login-google">
+    <button class="btn-google" id="btn-login-google" onclick="openProfile()">
       <svg viewBox="0 0 20 20" fill="none"><path d="M19.6 10.23c0-.68-.06-1.36-.18-2H10v3.79h5.39a4.6 4.6 0 01-2 3.02v2.51h3.23c1.89-1.74 2.98-4.3 2.98-7.32z" fill="#4285F4"/><path d="M10 20c2.7 0 4.97-.9 6.62-2.44l-3.23-2.51c-.9.6-2.04.96-3.39.96-2.6 0-4.8-1.76-5.59-4.12H1.08v2.6A10 10 0 0010 20z" fill="#34A853"/><path d="M4.41 11.89A6 6 0 014.1 10c0-.65.11-1.28.31-1.89V5.51H1.08A10 10 0 000 10c0 1.61.39 3.13 1.08 4.49l3.33-2.6z" fill="#FBBC05"/><path d="M10 3.96c1.47 0 2.79.5 3.83 1.5l2.87-2.87C14.96.99 12.69 0 10 0A10 10 0 001.08 5.51l3.33 2.6C5.2 5.72 7.4 3.96 10 3.96z" fill="#EA4335"/></svg>
       Googleでログイン
     </button>
-    <button class="btn-guest" id="btn-login-guest">ゲストとして試す</button>
+    <button class="btn-guest" id="btn-login-guest" onclick="openProfile()">ゲストとして試す</button>
     <div class="login-terms"><a href="#">利用規約</a>および<a href="#">プライバシーポリシー</a>に同意します</div>
   </div>
 </div>
@@ -487,7 +487,7 @@ body{display:flex;justify-content:center}
 </div>
 
 <!-- PROFILE MODAL -->
-<div class="modal-bg" id="prof-modal">
+<div class="modal-bg" id="prof-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">プロフィール設定</div>
@@ -508,7 +508,7 @@ body{display:flex;justify-content:center}
       <div class="goal-btn" id="goal-health" onclick="selGoal(this,'health','健康維持')"><div class="goal-btn-icon">❤️</div><div class="goal-btn-name">健康維持</div></div>
       <div class="goal-btn" id="goal-habit" onclick="selGoal(this,'habit','習慣化')"><div class="goal-btn-icon">📅</div><div class="goal-btn-name">習慣化したい</div></div>
     </div>
-    <button class="btn-p" id="btn-start" onclick="startGame()" disabled>冒険をはじめる 💪</button>
+    <button class="btn-p" id="btn-start" onclick="startGame()">冒険をはじめる 💪</button>
   </div>
 </div>
 
@@ -645,10 +645,14 @@ function goBack(){
 function openProfile(){document.getElementById('prof-modal').classList.add('show');}
 function selAv(el,e){document.querySelectorAll('.av-opt').forEach(function(a){a.classList.remove('sel')});el.classList.add('sel');avatar=e;}
 function selGoal(el,g,lbl){document.querySelectorAll('.goal-btn').forEach(function(b){b.classList.remove('sel')});el.classList.add('sel');userGoal=g;goalLabel=lbl;}
-function checkNick(){var v=document.getElementById('nick-inp').value.trim();document.getElementById('btn-start').disabled=v.length<2;}
+function checkNick(){
+  var v=document.getElementById('nick-inp').value.trim();
+  var btn=document.getElementById('btn-start');
+  if(btn){btn.style.opacity=v.length<2?'0.5':'1';}
+}
 function startGame(){
   var v=document.getElementById('nick-inp').value.trim();
-  if(v.length<2)return;
+  if(v.length<2){showToast('ニックネームを2文字以上入力してください');return;}
   nick=v;
   document.getElementById('prof-modal').classList.remove('show');
   var lg=document.getElementById('s-login');
@@ -1186,27 +1190,12 @@ function showToast(msg){
   setTimeout(function(){t.classList.remove('show');},2400);
 }
 
-// モバイル対応：ログインボタンのイベント登録
+// モーダル背景クリックで閉じる（追加モーダル用）
 document.addEventListener('DOMContentLoaded',function(){
-  var btnGoogle=document.getElementById('btn-login-google');
-  var btnGuest=document.getElementById('btn-login-guest');
-  if(btnGoogle){
-    btnGoogle.addEventListener('click',function(){openProfile();});
-  }
-  if(btnGuest){
-    btnGuest.addEventListener('click',function(){openProfile();});
-  }
-  // モーダル背景クリックで閉じる
-  ['prof-modal','raid-select-modal','add-qr-modal','custom-ex-modal'].forEach(function(id){
+  ['add-qr-modal','custom-ex-modal'].forEach(function(id){
     var el=document.getElementById(id);
-    if(!el)return;
-    el.addEventListener('click',function(e){if(e.target===el)el.classList.remove('show');});
+    if(el)el.addEventListener('click',function(e){if(e.target===el)el.classList.remove('show');});
   });
-  // スタートボタン
-  var btnStart=document.getElementById('btn-start');
-  if(btnStart){
-    btnStart.addEventListener('click',function(){startGame();});
-  }
 });
 </script>
 </body>
