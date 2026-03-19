@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { margin: 0; font-family: sans-serif; }
+#app { position: relative; width: 100%; height: 100vh; overflow: clip; }
+.scr { position: absolute; inset: 0; background: white; z-index: 1; }
+.scr.off { transform: translateX(100%); pointer-events: none; z-index: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="scr" id="s-login">
+    <p style="padding:20px">ログイン画面</p>
+    <div onclick="goHome()" style="margin:20px;padding:20px;background:green;color:white;font-size:20px;text-align:center;cursor:pointer">タップしてホームへ</div>
+  </div>
+  <div class="scr off" id="s-home">
+    <p style="padding:20px">ホーム画面 - 成功！</p>
+  </div>
+</div>
+<script>
+function goHome(){
+  document.getElementById('s-login').classList.add('off');
+  document.getElementById('s-home').classList.remove('off');
+}
+</script>
+</body>
+</html>
