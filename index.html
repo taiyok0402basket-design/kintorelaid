@@ -60,9 +60,10 @@ body{display:flex;justify-content:center}
 .feat-txt strong{color:var(--tx);font-weight:800}
 .login-btns{padding:24px 28px 44px}
 .login-btn-t{font-size:15px;font-weight:800;text-align:center;margin-bottom:14px}
-.btn-google{width:100%;background:var(--ca);border:1px solid var(--bd2);border-radius:var(--r);padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--tx);transition:background .15s;margin-bottom:10px}
-.btn-google svg{width:20px;height:20px;flex-shrink:0}
-.btn-guest{width:100%;background:var(--bg);border:none;border-radius:var(--r);padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--t2);cursor:pointer}
+.btn-google{width:100%;background:var(--ca);border:1px solid var(--bd2);border-radius:var(--r);padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--tx);transition:background .15s;margin-bottom:10px;-webkit-appearance:none;appearance:none;touch-action:manipulation;user-select:none}
+.btn-google:hover{background:var(--bg)}
+.btn-google svg{width:20px;height:20px;flex-shrink:0;pointer-events:none}
+.btn-guest{width:100%;background:var(--bg);border:none;border-radius:var(--r);padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--t2);cursor:pointer;-webkit-appearance:none;appearance:none;touch-action:manipulation;user-select:none}
 .login-terms{font-size:11px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.7}
 .login-terms a{color:var(--bl);text-decoration:none}
 .av-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px}
@@ -1190,24 +1191,21 @@ document.addEventListener('DOMContentLoaded',function(){
   var btnGoogle=document.getElementById('btn-login-google');
   var btnGuest=document.getElementById('btn-login-guest');
   if(btnGoogle){
-    btnGoogle.addEventListener('click',function(e){e.preventDefault();openProfile();});
-    btnGoogle.addEventListener('touchend',function(e){e.preventDefault();openProfile();});
+    btnGoogle.addEventListener('click',function(){openProfile();});
   }
   if(btnGuest){
-    btnGuest.addEventListener('click',function(e){e.preventDefault();openProfile();});
-    btnGuest.addEventListener('touchend',function(e){e.preventDefault();openProfile();});
+    btnGuest.addEventListener('click',function(){openProfile();});
   }
-  // モーダル背景タッチで閉じる
+  // モーダル背景クリックで閉じる
   ['prof-modal','raid-select-modal','add-qr-modal','custom-ex-modal'].forEach(function(id){
     var el=document.getElementById(id);
     if(!el)return;
     el.addEventListener('click',function(e){if(e.target===el)el.classList.remove('show');});
-    el.addEventListener('touchend',function(e){if(e.target===el)el.classList.remove('show');});
   });
   // スタートボタン
   var btnStart=document.getElementById('btn-start');
   if(btnStart){
-    btnStart.addEventListener('touchend',function(e){e.preventDefault();startGame();});
+    btnStart.addEventListener('click',function(){startGame();});
   }
 });
 </script>
