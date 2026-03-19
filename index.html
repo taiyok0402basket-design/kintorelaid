@@ -1299,10 +1299,10 @@ var currentUid = null;
 
 // Googleログイン実行
 function loginWithGoogle(){
+  authHandled = true; // onAuthStateChangedの自動処理を止める
   auth.signInWithPopup(provider)
     .then(function(result){
       currentUid = result.user.uid;
-      // Firestoreに既存データがあるか確認
       return db.collection('users').doc(currentUid).get();
     })
     .then(function(doc){
@@ -1316,6 +1316,7 @@ function loginWithGoogle(){
       }
     })
     .catch(function(err){
+      authHandled = false;
       showToast('ログインに失敗しました');
     });
 }
@@ -1362,17 +1363,20 @@ function goToHome(){
   showToast('ようこそ、' + nick + '！仲間と一緒に頑張ろう💪');
 }
 
-// ログイン状態の監視（ページ再読み込み時のセッション復元）
+// ログイン状態の監視（ページ再読み込み時のセッション復元のみ）
+var authHandled = false;
 auth.onAuthStateChanged(function(user){
+  if(authHandled) return;
   if(user && cur === 'login'){
     currentUid = user.uid;
     db.collection('users').doc(currentUid).get()
       .then(function(doc){
         if(doc.exists && doc.data().nickname){
+          // 既存ユーザーのみ自動復元
           loadUserData(doc.data());
           goToHome();
         }
-        // データなければログイン画面のまま
+        // 新規ユーザーはログイン画面のまま待機
       }).catch(function(){});
   }
 });
