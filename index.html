@@ -809,5 +809,150 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 </script>
+
+<!-- ===== FIREBASE ===== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, addDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB8InUZ80rGz3yWqvyLmP_S0wSEbT2a3xE",
+  authDomain: "kintorelaid.firebaseapp.com",
+  projectId: "kintorelaid",
+  storageBucket: "kintorelaid.firebasestorage.app",
+  messagingSenderId: "176416391745",
+  appId: "1:176416391745:web:1f0bbe5ffd53b3fa597cc0",
+  measurementId: "G-WQS6DQ792M"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ===== AUTH: Googleログインボタンを本物にする =====
+document.querySelectorAll('.btn-google').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      console.error('ログインエラー:', err);
+      showToast('ログインに失敗しました');
+    }
+  });
+});
+
+// ===== AUTH STATE: ログイン状態を監視 =====
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    // ログイン済み → ユーザーデータを取得 or 作成
+    const userRef = doc(db, 'users', user.uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) {
+      // 初回 → プロフィール設定モーダルを開く
+      document.getElementById('profile-modal').classList.add('show');
+      // 「冒険をはじめる」ボタンの処理を上書き
+      document.getElementById('btn-start').onclick = async () => {
+        const nick = document.getElementById('nick-input').value.trim();
+        if (nick.length < 2) return;
+        await setDoc(userRef, {
+          nickname: nick,
+          avatar: selectedAvatar,
+          level: 1,
+          exp: 0,
+          totalDamage: 0,
+          totalKills: 0,
+          createdAt: serverTimestamp()
+        });
+        applyUserData({ nickname: nick, avatar: selectedAvatar, level: 1, exp: 0, totalDamage: 0, totalKills: 0 });
+        document.getElementById('profile-modal').classList.remove('show');
+        goTo('home');
+      };
+    } else {
+      // 2回目以降 → そのままホームへ
+      applyUserData(snap.data());
+      if (window.currentScreen === 'login') goTo('home');
+    }
+    // レイドデータを読み込む
+    loadRaidsFromFirebase();
+  }
+});
+
+function applyUserData(data) {
+  nickname = data.nickname || 'プレイヤー';
+  selectedAvatar = data.avatar || '🐼';
+  document.getElementById('home-avatar').textContent = selectedAvatar;
+  document.getElementById('prof-avatar').textContent = selectedAvatar;
+  document.getElementById('prof-name').textContent = nickname;
+}
+
+// ===== RAIDS: Firestoreからレイドを読み込む =====
+async function loadRaidsFromFirebase() {
+  try {
+    const snap = await getDocs(collection(db, 'raids'));
+    if (snap.empty) {
+      // レイドがまだなければサンプルデータを作成
+      await seedRaids();
+      loadRaidsFromFirebase();
+      return;
+    }
+    snap.forEach((d, i) => {
+      const r = d.data();
+      // IDをraidオブジェクトに紐付け
+      if (window.raidIds === undefined) window.raidIds = [];
+      window.raidIds[i] = d.id;
+      if (raids[i]) raids[i].hp = r.currentHp ?? raids[i].maxHp;
+    });
+    showToast('レイドデータを読み込みました');
+  } catch (e) {
+    console.error('レイド読み込みエラー:', e);
+  }
+}
+
+// ===== RAIDS: 初回のサンプルデータをFirestoreに投入 =====
+async function seedRaids() {
+  const samples = [
+    { name:'フォレストスライム', icon:'🐉', type:'location', place:'代々木公園', difficulty:'easy', maxHp:500, currentHp:360, minutesLeft:22, participants:3, rewardXp:80 },
+    { name:'アイアンゴブリン', icon:'👹', type:'location', place:'渋谷駅前', difficulty:'mid', maxHp:2000, currentHp:760, minutesLeft:134, participants:8, rewardXp:150 },
+    { name:'シャドウウルフ', icon:'🐺', type:'remote', place:'全国', difficulty:'mid', maxHp:900, currentHp:162, minutesLeft:18, participants:12, rewardXp:130 },
+    { name:'ストーンゴーレム', icon:'🪨', type:'remote', place:'全国', difficulty:'mid', maxHp:2000, currentHp:1700, minutesLeft:360, participants:5, rewardXp:160 },
+    { name:'フレイムドラゴン', icon:'🔥', type:'remote', place:'全国', difficulty:'hard', maxHp:8000, currentHp:6200, minutesLeft:480, participants:24, rewardXp:300 },
+    { name:'ダークウィッチ', icon:'🧙', type:'location', place:'新宿中央公園', difficulty:'hard', maxHp:5000, currentHp:420, minutesLeft:55, participants:15, rewardXp:280 },
+  ];
+  for (const r of samples) {
+    await addDoc(collection(db, 'raids'), { ...r, createdAt: serverTimestamp() });
+  }
+}
+
+// ===== ACTION: 筋トレダメージをFirestoreに反映 =====
+const _origDoAction = window.doAction;
+window.doAction = async function(type, dmg, cdSec, label, btnId, cdId) {
+  // まずローカルで即時反映（UX優先）
+  _origDoAction(type, dmg, cdSec, label, btnId, cdId);
+  // Firestoreにも保存
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    const raidId = window.raidIds?.[currentRaidIdx];
+    if (raidId) {
+      await updateDoc(doc(db, 'raids', raidId), { currentHp: Math.max(0, raidHp[currentRaidIdx]) });
+    }
+    await updateDoc(doc(db, 'users', user.uid), {
+      totalDamage: increment(Math.min(dmg, myLimit - (myDmg - Math.min(dmg, myLimit - (myDmg - dmg)))))
+    });
+    await addDoc(collection(db, 'actions'), {
+      userId: user.uid,
+      raidIdx: currentRaidIdx,
+      actionType: type,
+      damage: dmg,
+      createdAt: serverTimestamp()
+    });
+  } catch (e) {
+    console.error('DB更新エラー:', e);
+  }
+};
+</script>
 </body>
 </html>
