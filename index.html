@@ -704,6 +704,8 @@ function startGame(){
   var v=document.getElementById('nick-inp').value.trim();
   if(v.length<2){showToast('ニックネームを2文字以上入力してください');return;}
   nick=v;
+  // Firestoreに保存（Googleログイン済みの場合）
+  saveUserData();
   goToHome();
 }
 
@@ -1207,6 +1209,7 @@ function addDmg(dmg,type,label,sets){
   var mm=now.getMinutes().toString().padStart(2,'0');
   var exObj=exercises.find(function(e){return e.id===type;});
   logs.unshift({icon:exObj?exObj.icon:'💪',name:label||type,dmg:dmg,xp:calcXp(type,dmg),time:hh+':'+mm});
+  saveUserData();
 }
 function rendLogList(){
   if(logs.length===0){document.getElementById('log-list').innerHTML='<div style="text-align:center;padding:24px 0;font-size:14px;color:var(--t3)">まだ記録がありません</div>';return;}
@@ -1284,31 +1287,59 @@ firebase.initializeApp(firebaseConfig);
 var auth = firebase.auth();
 var db = firebase.firestore();
 var provider = new firebase.auth.GoogleAuthProvider();
+var currentUid = null;
 
 // Googleログイン実行
 function loginWithGoogle(){
   auth.signInWithPopup(provider)
     .then(function(result){
-      var user = result.user;
-      nick = user.displayName || 'FitUser';
-      avatar = '🐼';
-      // Firestoreにユーザー保存
-      return db.collection('users').doc(user.uid).set({
-        nickname: nick,
-        avatar: avatar,
-        goal: userGoal,
-        level: lv,
-        exp: exp,
-        total_damage: totalDmg,
-        updated_at: firebase.firestore.FieldValue.serverTimestamp()
-      }, {merge: true});
+      currentUid = result.user.uid;
+      // Firestoreに既存データがあるか確認
+      return db.collection('users').doc(currentUid).get();
     })
-    .then(function(){
-      goToHome();
+    .then(function(doc){
+      if(doc.exists && doc.data().nickname){
+        // 既存ユーザー → データ復元してホームへ
+        loadUserData(doc.data());
+        goToHome();
+      } else {
+        // 新規ユーザー → プロフィール設定へ
+        showProfileForm();
+      }
     })
     .catch(function(err){
-      showToast('ログインに失敗しました: ' + err.message);
+      showToast('ログインに失敗しました');
     });
+}
+
+// Firestoreからデータ復元
+function loadUserData(data){
+  nick = data.nickname || 'FitUser';
+  avatar = data.avatar || '🐼';
+  userGoal = data.goal || 'diet';
+  goalLabel = data.goalLabel || 'ダイエット';
+  lv = data.level || 1;
+  exp = data.exp || 0;
+  totalDmg = data.total_damage || 0;
+  totalSets = data.total_sets || 0;
+  streak = data.streak || 1;
+}
+
+// Firestoreへデータ保存
+function saveUserData(){
+  if(!currentUid) return;
+  db.collection('users').doc(currentUid).set({
+    nickname: nick,
+    avatar: avatar,
+    goal: userGoal,
+    goalLabel: goalLabel,
+    level: lv,
+    exp: exp,
+    total_damage: totalDmg,
+    total_sets: totalSets,
+    streak: streak,
+    updated_at: firebase.firestore.FieldValue.serverTimestamp()
+  }, {merge: true}).catch(function(){});
 }
 
 // ホームへ遷移する共通処理
@@ -1323,11 +1354,18 @@ function goToHome(){
   showToast('ようこそ、' + nick + '！仲間と一緒に頑張ろう💪');
 }
 
-// ログイン状態の監視
+// ログイン状態の監視（ページ再読み込み時のセッション復元）
 auth.onAuthStateChanged(function(user){
   if(user && cur === 'login'){
-    nick = user.displayName || nick;
-    goToHome();
+    currentUid = user.uid;
+    db.collection('users').doc(currentUid).get()
+      .then(function(doc){
+        if(doc.exists && doc.data().nickname){
+          loadUserData(doc.data());
+          goToHome();
+        }
+        // データなければログイン画面のまま
+      }).catch(function(){});
   }
 });
 
