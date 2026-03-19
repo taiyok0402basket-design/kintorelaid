@@ -61,10 +61,10 @@ body{display:flex;justify-content:center}
 .feat-txt strong{color:var(--tx);font-weight:800}
 .login-btns{padding:24px 28px 44px}
 .login-btn-t{font-size:15px;font-weight:800;text-align:center;margin-bottom:14px}
-.btn-google{width:100%;background:var(--ca);border:1px solid var(--bd2);border-radius:var(--r);padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--tx);transition:background .15s;margin-bottom:10px;-webkit-appearance:none;appearance:none;touch-action:manipulation;user-select:none}
+.btn-google{width:100%;background:var(--ca);border:1px solid var(--bd2);border-radius:var(--r);padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--tx);transition:background .15s;margin-bottom:10px;-webkit-appearance:none;appearance:none;touch-action:manipulation;user-select:none;text-decoration:none;box-sizing:border-box}
 .btn-google:hover{background:var(--bg)}
 .btn-google svg{width:20px;height:20px;flex-shrink:0;pointer-events:none}
-.btn-guest{width:100%;background:var(--bg);border:none;border-radius:var(--r);padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--t2);cursor:pointer;-webkit-appearance:none;appearance:none;touch-action:manipulation;user-select:none}
+.btn-guest{width:100%;background:var(--bg);border:none;border-radius:var(--r);padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--t2);cursor:pointer;-webkit-appearance:none;appearance:none;touch-action:manipulation;user-select:none;text-decoration:none;display:block;text-align:center;box-sizing:border-box}
 .login-terms{font-size:11px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.7}
 .login-terms a{color:var(--bl);text-decoration:none}
 .av-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px}
@@ -261,11 +261,11 @@ body{display:flex;justify-content:center}
     <div style="height:.5px;background:var(--bd);margin:0 28px"></div>
     <div class="login-btns">
       <div class="login-btn-t">はじめる</div>
-      <div style="width:100%;background:var(--ca);border:1px solid var(--bd2);border-radius:var(--r);padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--tx);margin-bottom:10px;box-sizing:border-box" id="btn-login-google">
+      <a href="javascript:void(0)" class="btn-google" ontouchstart="" onclick="openProfile();return false;">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><path d="M19.6 10.23c0-.68-.06-1.36-.18-2H10v3.79h5.39a4.6 4.6 0 01-2 3.02v2.51h3.23c1.89-1.74 2.98-4.3 2.98-7.32z" fill="#4285F4"/><path d="M10 20c2.7 0 4.97-.9 6.62-2.44l-3.23-2.51c-.9.6-2.04.96-3.39.96-2.6 0-4.8-1.76-5.59-4.12H1.08v2.6A10 10 0 0010 20z" fill="#34A853"/><path d="M4.41 11.89A6 6 0 014.1 10c0-.65.11-1.28.31-1.89V5.51H1.08A10 10 0 000 10c0 1.61.39 3.13 1.08 4.49l3.33-2.6z" fill="#FBBC05"/><path d="M10 3.96c1.47 0 2.79.5 3.83 1.5l2.87-2.87C14.96.99 12.69 0 10 0A10 10 0 001.08 5.51l3.33 2.6C5.2 5.72 7.4 3.96 10 3.96z" fill="#EA4335"/></svg>
         Googleでログイン
-      </div>
-      <div style="width:100%;background:var(--bg);border-radius:var(--r);padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--t2);cursor:pointer;text-align:center;box-sizing:border-box" id="btn-login-guest">ゲストとして試す</div>
+      </a>
+      <a href="javascript:void(0)" class="btn-guest" ontouchstart="" onclick="openProfile();return false;">ゲストとして試す</a>
       <div class="login-terms"><a href="#">利用規約</a>および<a href="#">プライバシーポリシー</a>に同意します</div>
     </div>
   </div>
@@ -1193,19 +1193,9 @@ function showToast(msg){
   setTimeout(function(){t.classList.remove('show');},2400);
 }
 
-// モーダル背景クリックで閉じる（追加モーダル用）
-document.addEventListener('DOMContentLoaded',function(){
-  // ログインボタン（divベース）
-  var g=document.getElementById('btn-login-google');
-  var gu=document.getElementById('btn-login-guest');
-  if(g){g.addEventListener('click',function(){openProfile();});}
-  if(gu){gu.addEventListener('click',function(){openProfile();});}
-  // モーダル背景クリックで閉じる
-  ['add-qr-modal','custom-ex-modal'].forEach(function(id){
-    var el=document.getElementById(id);
-    if(el)el.addEventListener('click',function(e){if(e.target===el)el.classList.remove('show');});
-  });
-});
+// モーダル背景クリックで閉じる
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
 </script>
 </body>
 </html>
