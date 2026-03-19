@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>筋トレレイド</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
 :root{--g:#3B6D11;--gl:#EAF3DE;--gm:#639922;--gd:#27500A;--gb:#C0DD97;--am:#BA7517;--al:#FAEEDA;--rd:#E24B4A;--rl:#FCEBEB;--bl:#185FA5;--bll:#E6F1FB;--pu:#534AB7;--pul:#EEEDFE;--bg:#F2F0EA;--ca:#fff;--tx:#1a1a18;--t2:#6b6b67;--t3:#9a9a95;--bd:rgba(0,0,0,.09);--bd2:rgba(0,0,0,.16);--r:14px;--rs:10px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -262,7 +265,7 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
       <div style="height:.5px;background:var(--bd);margin:0 28px"></div>
       <div class="login-btns">
         <div class="login-btn-t">はじめる</div>
-        <div id="login-btn-1" onclick="showProfileForm()" style="width:100%;background:#fff;border:1px solid rgba(0,0,0,.16);border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:#1a1a18;margin-bottom:10px;cursor:pointer;box-sizing:border-box">
+        <div id="login-btn-1" onclick="loginWithGoogle()" style="width:100%;background:#fff;border:1px solid rgba(0,0,0,.16);border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:#1a1a18;margin-bottom:10px;cursor:pointer;box-sizing:border-box">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M19.6 10.23c0-.68-.06-1.36-.18-2H10v3.79h5.39a4.6 4.6 0 01-2 3.02v2.51h3.23c1.89-1.74 2.98-4.3 2.98-7.32z" fill="#4285F4"/><path d="M10 20c2.7 0 4.97-.9 6.62-2.44l-3.23-2.51c-.9.6-2.04.96-3.39.96-2.6 0-4.8-1.76-5.59-4.12H1.08v2.6A10 10 0 0010 20z" fill="#34A853"/><path d="M4.41 11.89A6 6 0 014.1 10c0-.65.11-1.28.31-1.89V5.51H1.08A10 10 0 000 10c0 1.61.39 3.13 1.08 4.49l3.33-2.6z" fill="#FBBC05"/><path d="M10 3.96c1.47 0 2.79.5 3.83 1.5l2.87-2.87C14.96.99 12.69 0 10 0A10 10 0 001.08 5.51l3.33 2.6C5.2 5.72 7.4 3.96 10 3.96z" fill="#EA4335"/></svg>
           Googleでログイン
         </div>
@@ -679,14 +682,7 @@ function startGame(){
   var v=document.getElementById('nick-inp').value.trim();
   if(v.length<2){showToast('ニックネームを2文字以上入力してください');return;}
   nick=v;
-  var lg=document.getElementById('s-login');
-  lg.classList.add('back');
-  setTimeout(function(){lg.classList.add('off');},280);
-  var h=document.getElementById('s-home');
-  h.classList.remove('off','back');
-  cur='home';
-  rendHome();
-  showToast('ようこそ、'+nick+'！仲間と一緒に頑張ろう💪');
+  goToHome();
 }
 
 // HOME RENDER
@@ -1217,9 +1213,69 @@ function showToast(msg){
 // モーダル背景クリックで閉じる
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
-// iOS Safari: touchstartを登録することでclickが発火するようになる
+// iOS Safari: touchstart登録
 document.getElementById('login-btn-1').addEventListener('touchstart',function(){},false);
 document.getElementById('login-btn-2').addEventListener('touchstart',function(){},false);
+
+// Firebase初期化
+var firebaseConfig = {
+  apiKey: "AIzaSyB8InUZ80rGz3yWqvyLmP_S0wSEbT2a3xE",
+  authDomain: "kintorelaid.firebaseapp.com",
+  projectId: "kintorelaid",
+  storageBucket: "kintorelaid.firebasestorage.app",
+  messagingSenderId: "176416391745",
+  appId: "1:176416391745:web:1f0bbe5ffd53b3fa597cc0"
+};
+firebase.initializeApp(firebaseConfig);
+var auth = firebase.auth();
+var db = firebase.firestore();
+var provider = new firebase.auth.GoogleAuthProvider();
+
+// Googleログイン実行
+function loginWithGoogle(){
+  auth.signInWithPopup(provider)
+    .then(function(result){
+      var user = result.user;
+      nick = user.displayName || 'FitUser';
+      avatar = '🐼';
+      // Firestoreにユーザー保存
+      return db.collection('users').doc(user.uid).set({
+        nickname: nick,
+        avatar: avatar,
+        goal: userGoal,
+        level: lv,
+        exp: exp,
+        total_damage: totalDmg,
+        updated_at: firebase.firestore.FieldValue.serverTimestamp()
+      }, {merge: true});
+    })
+    .then(function(){
+      goToHome();
+    })
+    .catch(function(err){
+      showToast('ログインに失敗しました: ' + err.message);
+    });
+}
+
+// ホームへ遷移する共通処理
+function goToHome(){
+  var lg = document.getElementById('s-login');
+  lg.classList.add('back');
+  setTimeout(function(){lg.classList.add('off');}, 280);
+  var h = document.getElementById('s-home');
+  h.classList.remove('off','back');
+  cur = 'home';
+  rendHome();
+  showToast('ようこそ、' + nick + '！仲間と一緒に頑張ろう💪');
+}
+
+// ログイン状態の監視
+auth.onAuthStateChanged(function(user){
+  if(user && cur === 'login'){
+    nick = user.displayName || nick;
+    goToHome();
+  }
+});
 
 </script>
 </body>
