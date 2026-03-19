@@ -522,7 +522,8 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
       <div class="ach-row"><div class="ach-ico lock">🐉</div><div style="flex:1"><div class="ach-name">上級挑戦</div><div class="ach-desc">Lv5になり上級レイドに参加</div></div><div class="ach-no" id="ach-hard">Lv1/5</div></div>
     </div>
     <div style="padding:8px 14px 32px">
-      <div onclick="doLogout()" style="width:100%;background:#fff;border:1px solid var(--bd2);border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--rd);text-align:center;cursor:pointer;box-sizing:border-box">ログアウト</div>
+      <div onclick="doLogout()" style="width:100%;background:#fff;border:1px solid var(--bd2);border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--rd);text-align:center;cursor:pointer;box-sizing:border-box;margin-bottom:10px">ログアウト</div>
+      <div onclick="doDeleteData()" style="width:100%;background:#fff;border:1px solid var(--bd2);border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--t3);text-align:center;cursor:pointer;box-sizing:border-box">データを削除する</div>
     </div>
   </div>
   <div class="tabbar">
@@ -1253,6 +1254,37 @@ function showToast(msg){
   var t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},2400);
+}
+
+// データ削除
+function doDeleteData(){
+  if(!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')){return;}
+  // Firestoreのデータ削除
+  var del = currentUid
+    ? db.collection('users').doc(currentUid).delete()
+    : Promise.resolve();
+  del.then(function(){
+    // ローカルの状態リセット
+    lv=1; exp=0; streak=1; todayDmg=0; todayXp=0; todaySets=0;
+    totalDmg=0; totalSets=0; nick='FitPanda'; avatar='🐼';
+    userGoal='diet'; goalLabel='ダイエット';
+    logs=[]; myRaidDmg=[0,0,0]; currentUid=null;
+    // Firebaseもサインアウト
+    var so = (typeof auth!=='undefined') ? auth.signOut() : Promise.resolve();
+    return so;
+  }).then(function(){
+    // ログイン画面に戻る
+    document.querySelectorAll('.scr').forEach(function(s){s.classList.add('off');});
+    var login=document.getElementById('s-login');
+    login.classList.remove('off','back');
+    document.getElementById('login-view').style.display='block';
+    document.getElementById('profile-form').style.display='none';
+    cur='login';
+    authHandled=false;
+    showToast('データを削除しました');
+  }).catch(function(){
+    showToast('削除に失敗しました');
+  });
 }
 
 // ログアウト
