@@ -290,7 +290,7 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
         <div class="login-terms"><a href="#">利用規約</a>および<a href="#">プライバシーポリシー</a>に同意します</div>
       </div>
     </div>
-    <div id="profile-form" style="display:none;padding:24px">
+    <div id="profile-form" style="display:none;padding:24px 24px 60px">
       <div style="font-size:22px;font-weight:900;margin-bottom:4px">プロフィール設定</div>
       <div style="font-size:13px;color:var(--t2);margin-bottom:24px">ニックネームとアバターを選んでください</div>
       <div class="inp-wrap"><div class="inp-lbl">ニックネーム（2〜12文字）</div><input type="text" class="tinp" id="nick-inp" placeholder="例：FitPanda" maxlength="12"></div>
@@ -309,7 +309,7 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
         <div class="goal-btn" onclick="selGoal(this,'health','健康維持')"><div class="goal-btn-icon">❤️</div><div class="goal-btn-name">健康維持</div></div>
         <div class="goal-btn" onclick="selGoal(this,'habit','習慣化')"><div class="goal-btn-icon">📅</div><div class="goal-btn-name">習慣化したい</div></div>
       </div>
-      <div onclick="startGame()" style="width:100%;background:#3B6D11;border-radius:14px;padding:14px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#fff;text-align:center;cursor:pointer;box-sizing:border-box">冒険をはじめる 💪</div>
+      <div id="start-btn" onclick="startGame()" style="width:100%;background:#3B6D11;border-radius:14px;padding:16px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#fff;text-align:center;cursor:pointer;box-sizing:border-box">冒険をはじめる 💪</div>
     </div>
   </div>
 </div>
@@ -693,6 +693,9 @@ function goBack(){
 function showProfileForm(){
   document.getElementById('login-view').style.display='none';
   document.getElementById('profile-form').style.display='block';
+  // 先頭にスクロールしてボタンが見えるようにする
+  var scroll=document.querySelector('#s-login .scroll');
+  if(scroll)scroll.scrollTop=0;
 }
 function openProfile(){showProfileForm();}
 function selAv(el,e){document.querySelectorAll('.av-opt').forEach(function(a){a.classList.remove('sel')});el.classList.add('sel');avatar=e;}
