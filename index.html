@@ -462,7 +462,7 @@ body{display:flex;justify-content:center}
     <div class="my-sec">
       <div class="my-sec-lbl">クイック記録の設定</div>
       <div id="qr-settings"></div>
-      <div style="font-size:12px;color:var(--t3);margin-top:6px;padding:0 2px">※ Lv.5で4枠目が解放されます</div>
+      <div style="font-size:12px;color:var(--t3);margin-top:6px;padding:0 2px">種目・回数を自由に設定できます</div>
     </div>
     <div class="my-sec">
       <div class="my-sec-lbl">実績</div>
@@ -566,6 +566,8 @@ var activityLog=[
   {av:'🦁',name:'ken',txt:'がフォレストスライムに参加',time:'45分前',raidId:0}
 ];
 
+var otherRows=[];
+
 var qrSettings=[
   {id:'sq',icon:'🦵',name:'スクワット',amount:10,unit:'回'},
   {id:'pu',icon:'💪',name:'腕立て',amount:10,unit:'回'},
@@ -628,7 +630,7 @@ function rendHome(){
 }
 
 function rendQrGrid(){
-  var slots=lv>=5?4:3;
+  var slots=qrSettings.length;
   var html='';
   for(var i=0;i<slots&&i<qrSettings.length;i++){
     var q=qrSettings[i];
@@ -718,8 +720,46 @@ function rendRecord(){
       '<div style="font-size:11px;font-weight:600;color:var(--gm);margin-top:8px;text-align:center" id="ex-preview-'+ex.id+'">0 ダメージ予定</div>'+
     '</div>';
   });
+  html+='<div class="ex-card" style="border:1px dashed var(--bd2)">'+
+    '<div class="ex-header">'+
+      '<div class="ex-icon">✏️</div>'+
+      '<div class="ex-name">その他のトレーニング</div>'+
+      '<div class="ex-unit" style="font-size:10px;color:var(--t3)">自由入力</div>'+
+    '</div>'+
+    '<div id="other-list"></div>'+
+    '<button onclick="addOtherRow()" style="width:100%;background:var(--bg);border:.5px dashed var(--bd2);border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;margin-top:8px">＋ 種目を追加</button>'+
+  '</div>';
   document.getElementById('exercise-inputs').innerHTML=html;
+  rendOtherList();
   rendLogList();
+}
+
+function rendOtherList(){
+  var el=document.getElementById('other-list');
+  if(!el)return;
+  if(otherRows.length===0){el.innerHTML='<div style="font-size:12px;color:var(--t3);text-align:center;padding:8px 0">「＋ 種目を追加」で自由に記録できます</div>';return;}
+  el.innerHTML=otherRows.map(function(r,i){
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+      '<input type="text" placeholder="種目名（例：ベンチプレス）" value="'+r.name+'" oninput="otherRows['+i+'].name=this.value" style="flex:2;border:.5px solid var(--bd2);border-radius:var(--rs);padding:9px 10px;font-size:13px;font-family:\'Nunito\',sans-serif;font-weight:600;color:var(--tx);background:var(--ca);outline:none">'+
+      '<input type="number" placeholder="数" value="'+r.val+'" oninput="otherRows['+i+'].val=parseInt(this.value)||0" style="flex:1;border:.5px solid var(--bd2);border-radius:var(--rs);padding:9px 8px;font-size:13px;font-family:\'Nunito\',sans-serif;font-weight:700;color:var(--tx);background:var(--ca);outline:none;text-align:center">'+
+      '<select onchange="otherRows['+i+'].unit=this.value" style="border:.5px solid var(--bd2);border-radius:var(--rs);padding:9px 6px;font-size:12px;font-family:\'Nunito\',sans-serif;font-weight:600;color:var(--tx);background:var(--ca);outline:none">'+
+        '<option value="rep"'+(r.unit==='rep'?' selected':'')+'>回</option>'+
+        '<option value="sec"'+(r.unit==='sec'?' selected':'')+'>秒</option>'+
+        '<option value="km"'+(r.unit==='km'?' selected':'')+'>km</option>'+
+        '<option value="min"'+(r.unit==='min'?' selected':'')+'>分</option>'+
+      '</select>'+
+      '<button onclick="removeOtherRow('+i+')" style="width:30px;height:30px;border-radius:50%;background:var(--rl);border:none;color:#A32D2D;font-size:16px;cursor:pointer;flex-shrink:0;font-weight:700">×</button>'+
+    '</div>';
+  }).join('');
+}
+
+function addOtherRow(){
+  otherRows.push({name:'',val:0,unit:'rep'});
+  rendOtherList();
+}
+function removeOtherRow(i){
+  otherRows.splice(i,1);
+  rendOtherList();
 }
 
 function chVal(id,d){
@@ -754,6 +794,16 @@ function saveRecord(){
       ex.val=0;
     }
   });
+  // その他のトレーニング
+  otherRows.forEach(function(r){
+    if(r.val>0&&r.name.trim()){
+      var d=r.unit==='km'?Math.round(r.val*80):r.unit==='sec'?Math.round(r.val/30*40):r.unit==='min'?Math.round(r.val*2*40):Math.round(r.val/10*50);
+      var x=Math.round(d*0.2);
+      totalD+=d; totalX+=x; sets++;
+      addDmg(d,'sq',r.name.trim()+'（自由記録）',1);
+    }
+  });
+  otherRows=[];
   if(totalD===0){showToast('記録を入力してください');return;}
   pendingDmg=totalD; pendingXp=totalX;
   document.getElementById('rsm-summary').textContent='合計ダメージ '+totalD+' · XP +'+totalX;
@@ -960,14 +1010,29 @@ function rendMypage(){
       '<div class="qrs-name">'+q.name+'</div>'+
       '<div class="qrs-amount">'+q.amount+q.unit+'</div>'+
       '<button class="qrs-edit" onclick="editQr('+i+')">変更</button>'+
+      '<button class="qrs-edit" onclick="removeQrSlot('+i+')" style="color:var(--rd)">削除</button>'+
     '</div>';
   }).join('');
+  qrsHtml+='<button onclick="addQrSlot()" style="width:100%;background:var(--gl);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--g);cursor:pointer;margin-top:4px">＋ 種目を追加</button>';
   document.getElementById('qr-settings').innerHTML=qrsHtml;
 }
 function editQr(i){
   var q=qrSettings[i];
   var v=prompt(q.name+'の量を入力（'+q.unit+'）',q.amount);
-  if(v&&parseInt(v)>0){qrSettings[i].amount=parseInt(v);rendMypage();showToast('クイック記録を更新しました');}
+  if(v&&parseInt(v)>0){qrSettings[i].amount=parseInt(v);rendMypage();rendHome();showToast('クイック記録を更新しました');}
+}
+function addQrSlot(){
+  var names=['sq','pu','ab','pl','rn'];
+  var next=names.find(function(n){return !qrSettings.find(function(q){return q.id===n;});});
+  if(!next){showToast('全種目が追加済みです');return;}
+  var ex=exercises.find(function(e){return e.id===next;});
+  qrSettings.push({id:ex.id,icon:ex.icon,name:ex.name,amount:ex.per||10,unit:ex.unit});
+  rendMypage();rendHome();showToast(ex.name+'を追加しました');
+}
+function removeQrSlot(i){
+  if(qrSettings.length<=1){showToast('最低1つは必要です');return;}
+  qrSettings.splice(i,1);
+  rendMypage();rendHome();showToast('削除しました');
 }
 
 // COMMON
