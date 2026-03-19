@@ -16,7 +16,7 @@ body { margin: 0; font-family: sans-serif; display:flex; justify-content:center;
   <div class="scr" id="s-login">
     <div class="scroll">
       <p style="padding:20px">ログイン画面</p>
-      <div onclick="goHome()" style="margin:20px;padding:20px;background:green;color:white;font-size:20px;text-align:center;cursor:pointer">タップしてホームへ</div>
+      <div onclick="openProfile()" style="margin:20px;padding:20px;background:green;color:white;font-size:20px;text-align:center;cursor:pointer">タップしてホームへ</div>
     </div>
   </div>
   <div class="scr off" id="s-home">
@@ -24,7 +24,7 @@ body { margin: 0; font-family: sans-serif; display:flex; justify-content:center;
   </div>
 </div>
 <script>
-function goHome(){
+function openProfile(){
   document.getElementById('s-login').classList.add('off');
   document.getElementById('s-home').classList.remove('off');
 }
