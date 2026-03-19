@@ -265,6 +265,49 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
   </div>
 </div>
 
+<!-- プロフィール編集オーバーレイ -->
+<div id="prof-edit-overlay" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:600;flex-direction:column">
+  <div style="background:var(--ca);border-bottom:.5px solid var(--bd);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div onclick="closeProfEdit()" style="font-size:14px;font-weight:700;color:var(--t2);cursor:pointer">キャンセル</div>
+    <div style="font-size:17px;font-weight:800">プロフィール編集</div>
+    <div onclick="saveProfEdit()" style="font-size:14px;font-weight:800;color:var(--g);cursor:pointer">保存</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:20px">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:10px">アバターを選ぶ</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;max-width:280px;margin:0 auto">
+        <div class="av-opt av1" id="edit-av-🐼" onclick="editSelAv('🐼')">🐼</div>
+        <div class="av-opt av2" id="edit-av-🦊" onclick="editSelAv('🦊')">🦊</div>
+        <div class="av-opt av3" id="edit-av-🐯" onclick="editSelAv('🐯')">🐯</div>
+        <div class="av-opt av4" id="edit-av-🐺" onclick="editSelAv('🐺')">🐺</div>
+        <div class="av-opt av5" id="edit-av-🦁" onclick="editSelAv('🦁')">🦁</div>
+        <div class="av-opt av1" id="edit-av-🐻" onclick="editSelAv('🐻')">🐻</div>
+        <div class="av-opt av2" id="edit-av-🐨" onclick="editSelAv('🐨')">🐨</div>
+        <div class="av-opt av3" id="edit-av-🦋" onclick="editSelAv('🦋')">🦋</div>
+        <div class="av-opt av4" id="edit-av-🦅" onclick="editSelAv('🦅')">🦅</div>
+        <div class="av-opt av5" id="edit-av-🐬" onclick="editSelAv('🐬')">🐬</div>
+      </div>
+    </div>
+    <div class="inp-wrap">
+      <div class="inp-lbl">ニックネーム（2〜12文字）</div>
+      <input type="text" class="tinp" id="edit-nick" placeholder="例：FitPanda" maxlength="12">
+    </div>
+    <div class="inp-wrap">
+      <div class="inp-lbl">ひとこと（50文字以内）</div>
+      <input type="text" class="tinp" id="edit-bio" placeholder="例：毎朝スクワット継続中！" maxlength="50">
+    </div>
+    <div class="inp-wrap" style="margin-bottom:0">
+      <div class="inp-lbl" style="margin-bottom:10px">目標</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="goal-btn" id="edit-goal-diet" onclick="editSelGoal('diet','ダイエット')"><div class="goal-btn-icon">🏃</div><div class="goal-btn-name">ダイエット</div></div>
+        <div class="goal-btn" id="edit-goal-muscle" onclick="editSelGoal('muscle','筋力アップ')"><div class="goal-btn-icon">💪</div><div class="goal-btn-name">筋力アップ</div></div>
+        <div class="goal-btn" id="edit-goal-health" onclick="editSelGoal('health','健康維持')"><div class="goal-btn-icon">❤️</div><div class="goal-btn-name">健康維持</div></div>
+        <div class="goal-btn" id="edit-goal-habit" onclick="editSelGoal('habit','習慣化')"><div class="goal-btn-icon">📅</div><div class="goal-btn-name">習慣化したい</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- LOGIN -->
 <div class="scr" id="s-login">
   <div class="scroll">
@@ -479,10 +522,17 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
   <div class="scroll">
     <div class="prof-card">
       <div class="prof-top">
-        <div class="prof-av-wrap"><div class="prof-av" id="prof-av">🐼</div><div class="prof-lv" id="prof-lv-b">Lv.1</div></div>
+        <div class="prof-av-wrap" onclick="openProfileEdit()" style="cursor:pointer">
+          <div class="prof-av" id="prof-av">🐼</div>
+          <div class="prof-lv" id="prof-lv-b">Lv.1</div>
+          <div style="position:absolute;bottom:-4px;left:-4px;background:var(--bl);color:#fff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:99px;border:2px solid var(--ca)">編集</div>
+        </div>
         <div style="flex:1">
-          <div class="prof-name" id="prof-name">FitPanda</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+            <div class="prof-name" id="prof-name">FitPanda</div>
+          </div>
           <div class="prof-since" id="prof-goal">目標：健康維持</div>
+          <div id="prof-bio" style="font-size:12px;color:var(--t2);margin-bottom:6px;display:none"></div>
           <div class="xp-hdr"><span class="xp-lbl" id="xp-lbl">Lv.1 → Lv.2</span><span class="xp-val" id="xp-val">0 / 100 XP</span></div>
           <div class="xp-track"><div class="xp-fill" id="xp-bar" style="width:0%"></div></div>
         </div>
@@ -954,13 +1004,14 @@ function sendToRaid(i){
   var r=raids[i];
   if(lv<r.minLv)return;
   var actual=Math.min(pendingDmg,raidLimit-myRaidDmg[i]);
-  raids[i].hp=Math.max(0,raids[i].hp-actual);
   myRaidDmg[i]+=actual;
   document.getElementById('raid-select-modal').classList.remove('show');
   showToast(r.name+'に '+actual+'ダメージ！ 💥');
-  rendHome();
-  if(raids[i].hp<=0)setTimeout(function(){showToast('🎉 '+r.name+'を撃破！報酬ゲット！');},700);
+  // Firestoreを更新（onSnapshotで全員に反映）
+  updateRaidHpInFirestore(i, actual);
   pendingDmg=0;
+  rendHome();
+  if(raids[i].hp-actual<=0) setTimeout(function(){showToast('🎉 '+r.name+'を撃破！報酬ゲット！');},700);
 }
 
 // FRIENDS
@@ -1078,7 +1129,6 @@ function doAtk(type,dmg,cd,label,btnId,cdId){
   var i=currentRaidIdx;
   if(myRaidDmg[i]>=raidLimit){showToast('このレイドの上限に達しました');return;}
   var actual=Math.min(dmg,raidLimit-myRaidDmg[i]);
-  raids[i].hp=Math.max(0,raids[i].hp-actual);
   myRaidDmg[i]+=actual;
   addDmg(actual,type,label,1);
   startCd(btnId,cdId,cd,false);
@@ -1088,12 +1138,8 @@ function doAtk(type,dmg,cd,label,btnId,cdId){
   var rem=raidLimit-myRaidDmg[i];
   document.getElementById('rd-limit-txt').textContent=rem>0?'上限まであと '+rem:'上限に達しました';
   document.getElementById('rd-limit-bar').style.width=Math.round(myRaidDmg[i]/raidLimit*100)+'%';
-  var pct=Math.round(raids[i].hp/raids[i].maxHp*100);
-  document.getElementById('rd-hp-num').textContent=raids[i].hp.toLocaleString()+' / '+raids[i].maxHp.toLocaleString();
-  var bar=document.getElementById('rd-hp-bar');
-  bar.style.width=pct+'%';
-  bar.className='hp-fill '+(pct>50?'hp-mid':'hp-low');
-  if(raids[i].hp<=0)setTimeout(function(){showToast('🎉 撃破！全員にボーナスXP！');},700);
+  // Firestoreを更新（onSnapshotで全員のHPが自動更新される）
+  updateRaidHpInFirestore(i, actual);
 }
 
 // MYPAGE
@@ -1102,6 +1148,8 @@ function rendMypage(){
   document.getElementById('home-av').textContent=avatar;
   document.getElementById('prof-name').textContent=nick;
   document.getElementById('prof-goal').textContent='目標：'+goalLabel;
+  var bioEl=document.getElementById('prof-bio');
+  if(bioEl){bioEl.textContent=bio; bioEl.style.display=bio?'block':'none';}
   document.getElementById('prof-lv-b').textContent='Lv.'+lv;
   document.getElementById('xp-lbl').textContent='Lv.'+lv+' → Lv.'+(lv+1);
   var nx=lvThr[lv]||lvThr[lvThr.length-1];
@@ -1256,7 +1304,59 @@ function showToast(msg){
   setTimeout(function(){t.classList.remove('show');},2400);
 }
 
-// データ削除
+var bio=''; // ひとこと
+
+// プロフィール編集
+var editAvatar=avatar;
+var editGoal=userGoal;
+var editGoalLabel=goalLabel;
+
+function openProfileEdit(){
+  editAvatar=avatar;
+  editGoal=userGoal;
+  editGoalLabel=goalLabel;
+  document.getElementById('edit-nick').value=nick;
+  document.getElementById('edit-bio').value=bio;
+  // アバター選択状態を反映
+  document.querySelectorAll('[id^="edit-av-"]').forEach(function(el){el.classList.remove('sel');});
+  var selEl=document.getElementById('edit-av-'+avatar);
+  if(selEl) selEl.classList.add('sel');
+  // 目標選択状態を反映
+  ['diet','muscle','health','habit'].forEach(function(g){
+    var el=document.getElementById('edit-goal-'+g);
+    if(el) el.classList.toggle('sel', g===userGoal);
+  });
+  document.getElementById('prof-edit-overlay').style.display='flex';
+}
+function closeProfEdit(){
+  document.getElementById('prof-edit-overlay').style.display='none';
+}
+function editSelAv(av){
+  editAvatar=av;
+  document.querySelectorAll('[id^="edit-av-"]').forEach(function(el){el.classList.remove('sel');});
+  var el=document.getElementById('edit-av-'+av);
+  if(el) el.classList.add('sel');
+}
+function editSelGoal(g,lbl){
+  editGoal=g; editGoalLabel=lbl;
+  ['diet','muscle','health','habit'].forEach(function(gg){
+    var el=document.getElementById('edit-goal-'+gg);
+    if(el) el.classList.toggle('sel', gg===g);
+  });
+}
+function saveProfEdit(){
+  var newNick=document.getElementById('edit-nick').value.trim();
+  if(newNick.length<2){showToast('ニックネームを2文字以上入力してください');return;}
+  nick=newNick;
+  avatar=editAvatar;
+  userGoal=editGoal;
+  goalLabel=editGoalLabel;
+  bio=document.getElementById('edit-bio').value.trim();
+  closeProfEdit();
+  rendMypage();
+  saveUserData();
+  showToast('プロフィールを更新しました！');
+}
 function doDeleteData(){
   if(!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')){return;}
   // Firestoreのデータ削除
@@ -1359,6 +1459,7 @@ function loadUserData(data){
   avatar = data.avatar || '🐼';
   userGoal = data.goal || 'diet';
   goalLabel = data.goalLabel || 'ダイエット';
+  bio = data.bio || '';
   lv = data.level || 1;
   exp = data.exp || 0;
   totalDmg = data.total_damage || 0;
@@ -1374,6 +1475,7 @@ function saveUserData(){
     avatar: avatar,
     goal: userGoal,
     goalLabel: goalLabel,
+    bio: bio,
     level: lv,
     exp: exp,
     total_damage: totalDmg,
@@ -1392,6 +1494,7 @@ function goToHome(){
   h.classList.remove('off','back');
   cur = 'home';
   rendHome();
+  initRaidSync();
   showToast('ようこそ、' + nick + '！仲間と一緒に頑張ろう💪');
 }
 
@@ -1404,14 +1507,74 @@ auth.onAuthStateChanged(function(user){
     db.collection('users').doc(currentUid).get()
       .then(function(doc){
         if(doc.exists && doc.data().nickname){
-          // 既存ユーザーのみ自動復元
           loadUserData(doc.data());
           goToHome();
+          initRaidSync();
         }
-        // 新規ユーザーはログイン画面のまま待機
       }).catch(function(){});
   }
 });
+
+// 今日の日付キー
+function todayKey(){
+  var d=new Date();
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+
+// レイドをFirestoreに初期化＆リアルタイム同期
+var raidUnsubscribe=null;
+function initRaidSync(){
+  var today=todayKey();
+  var raidRef=db.collection('daily_raids').doc(today);
+  raidRef.get().then(function(doc){
+    if(!doc.exists){
+      return raidRef.set({
+        date:today,
+        raids:raids.map(function(r){
+          return {id:r.id,name:r.name,hp:r.maxHp,maxHp:r.maxHp,parts:0};
+        })
+      });
+    }
+  }).then(function(){
+    if(raidUnsubscribe) raidUnsubscribe();
+    raidUnsubscribe=raidRef.onSnapshot(function(doc){
+      if(!doc.exists) return;
+      var data=doc.data();
+      if(!data.raids) return;
+      data.raids.forEach(function(fr,i){
+        if(raids[i]){raids[i].hp=fr.hp; raids[i].parts=fr.parts||0;}
+      });
+      if(cur==='home') rendHome();
+      if(cur==='raids') rendRaidsList();
+      if(cur==='raid') updateRaidDetailHP();
+    });
+  }).catch(function(){});
+}
+
+// レイド詳細のHPを更新
+function updateRaidDetailHP(){
+  var i=currentRaidIdx;
+  if(!raids[i]) return;
+  var pct=Math.round(raids[i].hp/raids[i].maxHp*100);
+  var el=document.getElementById('rd-hp-num');
+  var bar=document.getElementById('rd-hp-bar');
+  if(el) el.textContent=raids[i].hp.toLocaleString()+' / '+raids[i].maxHp.toLocaleString();
+  if(bar){bar.style.width=pct+'%'; bar.className='hp-fill '+(pct>50?'hp-mid':'hp-low');}
+}
+
+// FirestoreのレイドHPを更新
+function updateRaidHpInFirestore(raidIdx,dmg){
+  var today=todayKey();
+  db.collection('daily_raids').doc(today).get().then(function(doc){
+    if(!doc.exists) return;
+    var updatedRaids=doc.data().raids.map(function(r,i){
+      if(i===raidIdx) return {id:r.id,name:r.name,hp:Math.max(0,r.hp-dmg),maxHp:r.maxHp,parts:(r.parts||0)+1};
+      return r;
+    });
+    return db.collection('daily_raids').doc(today).update({raids:updatedRaids});
+  }).catch(function(){});
+}
+
 
 </script>
 </body>
