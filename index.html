@@ -465,6 +465,9 @@ body{display:flex;justify-content:center}
       <div style="font-size:12px;color:var(--t3);margin-top:6px;padding:0 2px">種目・回数を自由に設定できます</div>
     </div>
     <div class="my-sec">
+      <div class="my-sec-lbl">自作種目の管理</div>
+      <div id="custom-ex-list"></div>
+    <div class="my-sec">
       <div class="my-sec-lbl">実績</div>
       <div class="ach-row"><div class="ach-ico done">🏅</div><div style="flex:1"><div class="ach-name">最初の一歩</div><div class="ach-desc">初めて筋トレを記録した</div></div><div class="ach-ok">達成</div></div>
       <div class="ach-row"><div class="ach-ico lock">🔥</div><div style="flex:1"><div class="ach-name">3日連続</div><div class="ach-desc">3日間連続で記録する</div></div><div class="ach-no">未達成</div></div>
@@ -519,6 +522,45 @@ body{display:flex;justify-content:center}
   </div>
 </div>
 
+<!-- ADD QR MODAL -->
+<div class="modal-bg" id="add-qr-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">クイック記録に追加</div>
+    <div class="modal-sub">追加したい種目を選んでください</div>
+    <div id="add-qr-options"></div>
+  </div>
+</div>
+
+<!-- CUSTOM EXERCISE MODAL -->
+<div class="modal-bg" id="custom-ex-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">自作種目を作る</div>
+    <div class="modal-sub">オリジナルの種目をクイック記録に追加できます</div>
+    <div class="inp-wrap">
+      <div class="inp-lbl">種目名</div>
+      <input type="text" class="tinp" id="custom-ex-name" placeholder="例：ベンチプレス、懸垂、ヨガ">
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div style="flex:1">
+        <div class="inp-lbl">デフォルトの量</div>
+        <input type="number" class="tinp" id="custom-ex-val" placeholder="10" min="1">
+      </div>
+      <div style="flex:1">
+        <div class="inp-lbl">単位</div>
+        <select id="custom-ex-unit" style="width:100%;border:1px solid var(--bd2);border-radius:var(--rs);padding:12px 14px;font-size:15px;font-family:'Nunito',sans-serif;font-weight:600;color:var(--tx);background:var(--ca);outline:none">
+          <option value="rep">回</option>
+          <option value="sec">秒</option>
+          <option value="km">km</option>
+          <option value="min">分</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-p" onclick="saveCustomExercise()">作成してクイック記録に追加 ✓</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -567,6 +609,7 @@ var activityLog=[
 ];
 
 var otherRows=[];
+var customExercises=[];
 
 var qrSettings=[
   {id:'sq',icon:'🦵',name:'スクワット',amount:10,unit:'回'},
@@ -645,17 +688,22 @@ function rendQrGrid(){
   document.getElementById('qr-grid').innerHTML=html;
 }
 
+function removeCustomEx(i){
+  customExercises.splice(i,1);
+  rendMypage();showToast('削除しました');
+}
+
 function calcDmg(id,amount){
   var ex=exercises.find(function(e){return e.id===id;});
-  if(!ex)return 40;
-  var per=ex.per||10;
-  return Math.round((amount/per)*ex.dmgPer10);
+  if(ex){var per=ex.per||10;return Math.round((amount/per)*ex.dmgPer10);}
+  var cx=customExercises.find(function(c){return c.id===id;});
+  if(cx){return Math.round((amount/cx.defaultVal)*cx.dmgPer);}
+  return 40;
 }
 function calcXp(id,amount){
   var ex=exercises.find(function(e){return e.id===id;});
-  if(!ex)return 8;
-  var per=ex.per||10;
-  return Math.round((amount/per)*ex.xpPer10);
+  if(ex){var per=ex.per||10;return Math.round((amount/per)*ex.xpPer10);}
+  return Math.round(calcDmg(id,amount)*0.2);
 }
 
 function rendHomeRaids(){
@@ -1015,6 +1063,20 @@ function rendMypage(){
   }).join('');
   qrsHtml+='<button onclick="addQrSlot()" style="width:100%;background:var(--gl);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--g);cursor:pointer;margin-top:4px">＋ 種目を追加</button>';
   document.getElementById('qr-settings').innerHTML=qrsHtml;
+
+  // 自作種目一覧
+  var customHtml=customExercises.length===0
+    ? '<div style="font-size:12px;color:var(--t3);padding:10px 0">まだ自作種目がありません</div>'
+    : customExercises.map(function(c,i){
+        return '<div class="qr-setting">'+
+          '<div class="qrs-icon">✏️</div>'+
+          '<div class="qrs-name">'+c.name+'</div>'+
+          '<div class="qrs-amount">'+c.defaultVal+c.unit+'</div>'+
+          '<button class="qrs-edit" onclick="removeCustomEx('+i+')" style="color:var(--rd)">削除</button>'+
+        '</div>';
+      }).join('');
+  customHtml+='<button onclick="document.getElementById(\'custom-ex-modal\').classList.add(\'show\')" style="width:100%;background:var(--bll);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--bl);cursor:pointer;margin-top:4px">✏️ 自作種目を作る</button>';
+  document.getElementById('custom-ex-list').innerHTML=customHtml;
 }
 function editQr(i){
   var q=qrSettings[i];
@@ -1022,17 +1084,58 @@ function editQr(i){
   if(v&&parseInt(v)>0){qrSettings[i].amount=parseInt(v);rendMypage();rendHome();showToast('クイック記録を更新しました');}
 }
 function addQrSlot(){
-  var names=['sq','pu','ab','pl','rn'];
-  var next=names.find(function(n){return !qrSettings.find(function(q){return q.id===n;});});
-  if(!next){showToast('全種目が追加済みです');return;}
-  var ex=exercises.find(function(e){return e.id===next;});
-  qrSettings.push({id:ex.id,icon:ex.icon,name:ex.name,amount:ex.per||10,unit:ex.unit});
-  rendMypage();rendHome();showToast(ex.name+'を追加しました');
+  // 標準種目 + カスタム種目を合わせて選択肢を出す
+  var stdOptions=exercises.map(function(e){return {id:e.id,icon:e.icon,name:e.name,unit:e.unit,amount:e.per||10,custom:false};});
+  var customOptions=customExercises.filter(function(c){
+    return !qrSettings.find(function(q){return q.id===c.id;});
+  }).map(function(c){return {id:c.id,icon:'✏️',name:c.name,unit:c.unit,amount:c.defaultVal,custom:true};});
+  var all=stdOptions.concat(customOptions).filter(function(o){
+    return !qrSettings.find(function(q){return q.id===o.id;});
+  });
+  if(all.length===0){showToast('追加できる種目がありません');return;}
+  showAddQrModal(all);
+}
+function showAddQrModal(options){
+  var html='<div style="display:flex;flex-direction:column;gap:8px">';
+  options.forEach(function(o,i){
+    html+='<div onclick="confirmAddQr('+i+')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg);border-radius:var(--rs);cursor:pointer;border:.5px solid var(--bd)">'+
+      '<div style="font-size:22px">'+o.icon+'</div>'+
+      '<div style="flex:1"><div style="font-size:14px;font-weight:700">'+o.name+'</div>'+
+      '<div style="font-size:12px;color:var(--t3)">'+o.amount+o.unit+'（タップで追加）</div></div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--g)">追加</div>'+
+    '</div>';
+  });
+  html+='</div>';
+  document.getElementById('add-qr-options').innerHTML=html;
+  window._addQrOptions=options;
+  document.getElementById('add-qr-modal').classList.add('show');
+}
+function confirmAddQr(i){
+  var o=window._addQrOptions[i];
+  qrSettings.push({id:o.id,icon:o.icon,name:o.name,amount:o.amount,unit:o.unit});
+  document.getElementById('add-qr-modal').classList.remove('show');
+  rendMypage();rendHome();
+  showToast(o.name+'をクイック記録に追加しました！');
 }
 function removeQrSlot(i){
   if(qrSettings.length<=1){showToast('最低1つは必要です');return;}
   qrSettings.splice(i,1);
   rendMypage();rendHome();showToast('削除しました');
+}
+function saveCustomExercise(){
+  var nameEl=document.getElementById('custom-ex-name');
+  var valEl=document.getElementById('custom-ex-val');
+  var unitEl=document.getElementById('custom-ex-unit');
+  var name=nameEl.value.trim();
+  var val=parseInt(valEl.value)||0;
+  var unit=unitEl.value;
+  if(!name||val<=0){showToast('種目名と数値を入力してください');return;}
+  var id='custom_'+Date.now();
+  customExercises.push({id:id,name:name,unit:unit,defaultVal:val,dmgPer:unit==='km'?80:unit==='sec'?40:unit==='min'?80:50});
+  nameEl.value=''; valEl.value='';
+  document.getElementById('custom-ex-modal').classList.remove('show');
+  rendMypage();
+  showToast(name+'を自作種目に追加しました！');
 }
 
 // COMMON
