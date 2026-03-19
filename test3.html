@@ -1,30 +1,1205 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>筋トレレイド</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-html,body { height:100%; margin: 0; font-family: sans-serif; display:flex; justify-content:center; }
-#app { position: relative; width: 100%; max-width:430px; height: 100vh; overflow: clip; }
-.scr { position: absolute; inset: 0; background: white; z-index: 1; }
-.scr.off { transform: translateX(100%); pointer-events: none; z-index: 0; }
-#s-login{ z-index:10; background:#fff; }
+:root{--g:#3B6D11;--gl:#EAF3DE;--gm:#639922;--gd:#27500A;--gb:#C0DD97;--am:#BA7517;--al:#FAEEDA;--rd:#E24B4A;--rl:#FCEBEB;--bl:#185FA5;--bll:#E6F1FB;--pu:#534AB7;--pul:#EEEDFE;--bg:#F2F0EA;--ca:#fff;--tx:#1a1a18;--t2:#6b6b67;--t3:#9a9a95;--bd:rgba(0,0,0,.09);--bd2:rgba(0,0,0,.16);--r:14px;--rs:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--tx)}
+body{display:flex;justify-content:center}
+#app{width:100%;max-width:430px;height:100vh;background:var(--bg);position:relative;overflow:clip}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transition:transform .28s cubic-bezier(.4,0,.2,1),opacity .28s;z-index:1}
+.scr.off{transform:translateX(100%);opacity:0;pointer-events:none;z-index:0}
+.scr.back{transform:translateX(-30%);opacity:0;pointer-events:none;z-index:0}
+#s-login{z-index:10;background:var(--ca)}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+.card{background:var(--ca);border-radius:var(--r);border:.5px solid var(--bd)}
+.topbar{background:var(--ca);border-bottom:.5px solid var(--bd);padding:14px 16px 12px;flex-shrink:0}
+.topbar-row{display:flex;align-items:center;justify-content:space-between}
+.topbar-title{font-size:18px;font-weight:800}
+.back-btn{width:34px;height:34px;border-radius:50%;background:var(--bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px}
+.b-easy{background:var(--gl);color:var(--g)}.b-mid{background:var(--al);color:var(--am)}.b-hard{background:var(--rl);color:#A32D2D}
+.hp-track{background:var(--bg);border-radius:99px;overflow:hidden}
+.hp-fill{height:100%;border-radius:99px;transition:width .5s ease}
+.hp-high{background:var(--gm)}.hp-mid{background:var(--am)}.hp-low{background:var(--rd)}
+.tabbar{background:var(--ca);border-top:.5px solid var(--bd);display:flex;padding:6px 0 20px;flex-shrink:0}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0}
+.tab svg{width:22px;height:22px}
+.tab-lbl{font-size:10px;font-weight:700;color:var(--t3)}
+.tab.on .tab-lbl{color:var(--g)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-bg.show{opacity:1;pointer-events:all}
+.modal{background:var(--ca);border-radius:22px 22px 0 0;padding:20px 20px 44px;width:100%;max-width:430px;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:85vh;overflow-y:auto}
+.modal-bg.show .modal{transform:translateY(0)}
+.modal-handle{width:40px;height:4px;border-radius:99px;background:var(--bd2);margin:0 auto 20px}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--t2);margin-bottom:20px}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--gd);color:#EAF3DE;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;padding:9px 20px;border-radius:99px;opacity:0;pointer-events:none;white-space:nowrap;z-index:300;transition:opacity .2s}
+.toast.show{opacity:1}
+.btn-p{background:var(--g);border:none;border-radius:var(--r);padding:14px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#fff;cursor:pointer;width:100%;transition:background .15s}
+.btn-p:hover{background:var(--gd)}
+.btn-p:disabled{background:var(--bd2);color:var(--t3);cursor:not-allowed}
+.inp-lbl{font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px}
+.inp-wrap{margin-bottom:16px}
+.tinp{width:100%;border:1px solid var(--bd2);border-radius:var(--rs);padding:12px 14px;font-size:15px;font-family:'Nunito',sans-serif;font-weight:600;color:var(--tx);background:var(--ca);outline:none;transition:border-color .15s}
+.tinp:focus{border-color:var(--gm);box-shadow:0 0 0 3px rgba(99,153,34,.12)}
+.sec-lbl{font-size:12px;font-weight:700;color:var(--t3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+/* login */
+
+.login-hero{padding:52px 28px 24px;text-align:center}
+.login-logo{width:88px;height:88px;border-radius:24px;background:var(--gl);border:1.5px solid var(--gb);display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 18px}
+.login-title{font-size:30px;font-weight:900;letter-spacing:-1px;margin-bottom:8px}
+.login-sub{font-size:14px;color:var(--t2);line-height:1.7}
+.login-feats{display:flex;flex-direction:column;gap:12px;padding:0 28px 24px}
+.feat{display:flex;align-items:center;gap:12px}
+.feat-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.feat-txt{font-size:14px;color:var(--t2)}
+.feat-txt strong{color:var(--tx);font-weight:800}
+.login-btns{padding:24px 28px 44px}
+.login-btn-t{font-size:15px;font-weight:800;text-align:center;margin-bottom:14px}
+.btn-google{width:100%;background:var(--ca);border:1px solid var(--bd2);border-radius:var(--r);padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--tx);transition:background .15s;margin-bottom:10px;-webkit-appearance:none;appearance:none;touch-action:manipulation;user-select:none;text-decoration:none;box-sizing:border-box}
+.btn-google:hover{background:var(--bg)}
+.btn-google svg{width:20px;height:20px;flex-shrink:0;pointer-events:none}
+.btn-guest{width:100%;background:var(--bg);border:none;border-radius:var(--r);padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--t2);cursor:pointer;-webkit-appearance:none;appearance:none;touch-action:manipulation;user-select:none;text-decoration:none;display:block;text-align:center;box-sizing:border-box}
+.login-terms{font-size:11px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.7}
+.login-terms a{color:var(--bl);text-decoration:none}
+.av-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px}
+.av-opt{aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2.5px solid transparent;transition:border-color .15s}
+.av-opt.sel{border-color:var(--gm)}
+.av1{background:var(--gl)}.av2{background:var(--bll)}.av3{background:var(--al)}.av4{background:var(--pul)}.av5{background:var(--rl)}
+.goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.goal-btn{background:var(--bg);border:.5px solid var(--bd);border-radius:var(--rs);padding:12px;cursor:pointer;text-align:center;font-family:'Nunito',sans-serif;transition:all .15s}
+.goal-btn.sel{background:var(--gl);border-color:var(--gb)}
+.goal-btn-icon{font-size:20px;margin-bottom:4px}
+.goal-btn-name{font-size:13px;font-weight:700}
+/* home */
+.home-hdr{background:var(--ca);border-bottom:.5px solid var(--bd);padding:14px 16px;flex-shrink:0}
+.home-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.home-appname{font-size:22px;font-weight:900;letter-spacing:-.5px}
+.home-av{width:38px;height:38px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid var(--gb);cursor:pointer}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--bg);border-radius:var(--rs);padding:10px;text-align:center}
+.stat-v{font-size:17px;font-weight:800}
+.stat-l{font-size:10px;font-weight:700;color:var(--t3);margin-top:1px}
+.home-section{padding:12px 14px 0}
+.mission-card{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.mis-title{font-size:14px;font-weight:800}
+.mis-sub{font-size:12px;color:var(--t2);margin-top:2px}
+.mis-badge{background:var(--gl);color:var(--g);font-size:13px;font-weight:800;padding:5px 12px;border-radius:99px}
+.qr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.qr-btn{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:13px 10px;cursor:pointer;text-align:center;font-family:'Nunito',sans-serif;transition:all .15s}
+.qr-btn:active{transform:scale(.97)}
+.qr-btn.cd{opacity:.5;pointer-events:none}
+.qr-icon{font-size:22px;margin-bottom:4px}
+.qr-name{font-size:12px;font-weight:700;margin-bottom:2px}
+.qr-dmg{font-size:11px;font-weight:700;color:var(--gm)}
+.qr-cd{font-size:10px;font-weight:600;color:var(--t3);margin-top:2px}
+.raid-mini{padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:transform .1s;display:flex;align-items:center;gap:12px}
+.raid-mini:active{transform:scale(.98)}
+.rm-icon{width:48px;height:48px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.rm-info{flex:1;min-width:0}
+.rm-name{font-size:14px;font-weight:700;margin-bottom:3px}
+.rm-badges{display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap}
+.rm-time{font-size:12px;font-weight:600;color:var(--t3);flex-shrink:0;text-align:right}
+.rm-time.urgent{color:var(--rd);font-weight:800}
+.rm-locked{opacity:.5}
+.act-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--ca);border-radius:var(--rs);border:.5px solid var(--bd);margin-bottom:8px}
+.act-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.act-txt{font-size:13px;color:var(--t2);flex:1}
+.act-txt strong{color:var(--tx);font-weight:700}
+.act-time{font-size:11px;color:var(--t3)}
+.cheer-btn{background:var(--gl);border:none;border-radius:99px;padding:4px 10px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:var(--g);cursor:pointer;flex-shrink:0}
+/* record */
+.rec-today-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.rec-stat{background:var(--bg);border-radius:var(--rs);padding:12px;text-align:center}
+.rec-stat-v{font-size:20px;font-weight:900}
+.rec-stat-l{font-size:11px;font-weight:600;color:var(--t3);margin-top:2px}
+.streak-card{padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.streak-left{display:flex;align-items:center;gap:10px}
+.streak-num{font-size:22px;font-weight:900}
+.streak-lbl{font-size:12px;font-weight:600;color:var(--t2)}
+.streak-bonus{background:var(--al);color:var(--am);font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px}
+.log-row{display:flex;align-items:center;gap:10px;background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:12px 14px;margin-bottom:8px}
+.log-icon{font-size:22px;flex-shrink:0}
+.log-name{font-size:14px;font-weight:700}
+.log-time{font-size:11px;font-weight:600;color:var(--t3);margin-top:1px}
+.log-xp{font-size:14px;font-weight:800;color:var(--gm)}
+.log-dmg{font-size:11px;font-weight:600;color:var(--t3)}
+/* record input */
+.ex-card{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.ex-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ex-icon{font-size:24px;flex-shrink:0}
+.ex-name{font-size:15px;font-weight:800;flex:1}
+.ex-unit{font-size:12px;font-weight:600;color:var(--t3)}
+.num-row{display:flex;align-items:center;gap:12px}
+.num-btn{width:44px;height:44px;border-radius:50%;background:var(--bg);border:.5px solid var(--bd);font-size:22px;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700}
+.num-inp{flex:1;text-align:center;font-size:28px;font-weight:900;border:none;background:transparent;font-family:'Nunito',sans-serif;color:var(--tx);outline:none;width:100%}
+/* raid select modal */
+.raid-choice{background:var(--bg);border-radius:var(--r);padding:14px;margin-bottom:10px;cursor:pointer;transition:all .15s;border:2px solid transparent}
+.raid-choice.active{border-color:var(--gm);background:var(--gl)}
+.raid-choice.locked{opacity:.5;pointer-events:none}
+.rc-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.rc-icon{font-size:24px;flex-shrink:0}
+.rc-name{font-size:14px;font-weight:800;flex:1}
+.rc-badges{display:flex;gap:5px}
+.rc-hp-row{display:flex;justify-content:space-between;margin-bottom:4px}
+.rc-hp-pct{font-size:12px;font-weight:700}
+.rc-hp-num{font-size:11px;color:var(--t3)}
+.rc-reward{font-size:12px;color:var(--t2);margin-top:4px}
+.rc-lock-msg{font-size:12px;color:var(--rd);font-weight:700;margin-top:4px}
+/* friends */
+.friend-card{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.fr-av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;border:2px solid var(--gb)}
+.fr-info{flex:1;min-width:0}
+.fr-name{font-size:15px;font-weight:800;margin-bottom:2px}
+.fr-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px}
+.fr-tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--bll);color:var(--bl)}
+.fr-activity{font-size:12px;color:var(--t2)}
+.fr-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.fr-follow-btn{background:var(--g);border:none;border-radius:99px;padding:5px 12px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#fff;cursor:pointer}
+.fr-follow-btn.following{background:var(--bg);color:var(--t2);border:.5px solid var(--bd2)}
+.fr-cheer-btn{background:var(--gl);border:none;border-radius:99px;padding:5px 12px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:var(--g);cursor:pointer}
+.filter-row{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;background:var(--ca);border-bottom:.5px solid var(--bd)}
+.filter-row::-webkit-scrollbar{display:none}
+.f-chip{font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px;border:1px solid var(--bd2);background:var(--ca);color:var(--t2);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.f-chip.on{background:var(--gl);color:var(--g);border-color:var(--gb)}
+/* raid detail */
+.raid-hdr{background:var(--ca);border-bottom:.5px solid var(--bd);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.monster-hero{background:var(--ca);border-bottom:.5px solid var(--bd);padding:18px 16px 16px;flex-shrink:0}
+.mh-row{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.mh-icon{width:72px;height:72px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:40px;flex-shrink:0}
+.mh-name{font-size:20px;font-weight:900;margin-bottom:3px}
+.mh-sub{font-size:13px;color:var(--t2);margin-bottom:8px}
+.mh-chips{display:flex;gap:12px}
+.mh-chip{font-size:12px;font-weight:600;color:var(--t2)}
+.mh-hp-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.mh-hp-lbl{font-size:12px;font-weight:700;color:var(--t2)}
+.mh-hp-num{font-size:14px;font-weight:800}
+.contrib-card{margin:12px 14px 0;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+.contrib-lbl{font-size:13px;font-weight:600;color:var(--t2)}
+.contrib-limit{font-size:11px;font-weight:600;color:var(--t3);margin-top:2px}
+.contrib-v{font-size:24px;font-weight:900}
+.limit-wrap{margin:5px 14px 0}
+.limit-track{background:var(--bg);border-radius:99px;height:4px;overflow:hidden}
+.limit-fill{height:100%;border-radius:99px;background:var(--pu);transition:width .4s}
+.attack-section{padding:14px 14px 0}
+.attack-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.attack-btn{background:var(--ca);border:1px solid var(--bd);border-radius:var(--r);padding:16px 12px;cursor:pointer;text-align:center;font-family:'Nunito',sans-serif;transition:all .15s}
+.attack-btn:hover:not(.cd){border-color:var(--gb);background:var(--gl)}
+.attack-btn:active:not(.cd){transform:scale(.96)}
+.attack-btn.cd{opacity:.5;pointer-events:none}
+.attack-icon{font-size:26px;margin-bottom:5px}
+.attack-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.attack-dmg{font-size:12px;font-weight:700;color:var(--gm)}
+.attack-cd{font-size:11px;font-weight:600;color:var(--t3);margin-top:3px}
+.raid-participants{padding:14px 14px 0}
+.part-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--ca);border-radius:var(--rs);border:.5px solid var(--bd);margin-bottom:8px}
+.part-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.part-name{font-size:13px;font-weight:700;flex:1}
+.part-dmg{font-size:13px;font-weight:700;color:var(--gm)}
+.part-you{font-size:11px;font-weight:700;background:var(--gl);color:var(--g);padding:2px 7px;border-radius:99px}
+/* mypage */
+.prof-card{background:var(--ca);border-bottom:.5px solid var(--bd);padding:20px 16px}
+.prof-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.prof-av-wrap{position:relative}
+.prof-av{width:70px;height:70px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:34px;border:3px solid var(--gb)}
+.prof-lv{position:absolute;bottom:-4px;right:-4px;background:var(--g);color:#EAF3DE;font-size:10px;font-weight:800;padding:2px 6px;border-radius:99px;border:2px solid var(--ca)}
+.prof-name{font-size:20px;font-weight:900;margin-bottom:2px}
+.prof-since{font-size:12px;color:var(--t3);margin-bottom:8px}
+.xp-hdr{display:flex;justify-content:space-between;margin-bottom:4px}
+.xp-lbl,.xp-val{font-size:11px;font-weight:700;color:var(--t3)}
+.xp-track{background:var(--bg);border-radius:99px;height:6px;overflow:hidden}
+.xp-fill{height:100%;border-radius:99px;background:var(--gm)}
+.prof-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ps{background:var(--bg);border-radius:var(--rs);padding:10px;text-align:center}
+.ps-v{font-size:18px;font-weight:900}
+.ps-l{font-size:10px;font-weight:700;color:var(--t3);margin-top:1px}
+.my-sec{padding:14px 14px 0}
+.my-sec-lbl{font-size:12px;font-weight:700;color:var(--t3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.equip-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.equip-card{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:12px;display:flex;align-items:center;gap:10px}
+.eq-icon{width:38px;height:38px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.eq-name{font-size:12px;font-weight:700}
+.eq-bonus{font-size:11px;font-weight:700;color:var(--gm);margin-top:1px}
+.eq-empty{font-size:12px;font-weight:600;color:var(--t3)}
+.qr-setting{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.qrs-icon{font-size:20px;flex-shrink:0}
+.qrs-name{font-size:13px;font-weight:700;flex:1}
+.qrs-amount{font-size:13px;color:var(--t2);flex-shrink:0}
+.qrs-edit{background:var(--bg);border:none;border-radius:99px;padding:4px 10px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:var(--t2);cursor:pointer;flex-shrink:0}
+.ach-row{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.ach-ico{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ach-ico.done{background:var(--gl)}.ach-ico.lock{background:var(--bg);opacity:.6}
+.ach-name{font-size:13px;font-weight:700}
+.ach-desc{font-size:11px;font-weight:600;color:var(--t3);margin-top:1px}
+.ach-ok{font-size:11px;font-weight:700;background:var(--gl);color:var(--g);padding:2px 8px;border-radius:99px;flex-shrink:0}
+.ach-no{font-size:11px;font-weight:600;color:var(--t3);flex-shrink:0}
+@keyframes dmg-float{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.4)}}
+.dmg-float{position:fixed;font-size:22px;font-weight:900;color:var(--rd);pointer-events:none;z-index:400;animation:dmg-float .9s ease-out forwards}
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="scr" id="s-login">
-    <p style="padding:20px">ログイン画面</p>
-    <div onclick="goHome()" style="margin:20px;padding:20px;background:green;color:white;font-size:20px;text-align:center;cursor:pointer">タップしてホームへ</div>
-  </div>
-  <div class="scr off" id="s-home">
-    <p style="padding:20px">ホーム画面 - 成功！</p>
+
+<!-- LOGIN -->
+<div class="scr" id="s-login">
+  <div class="scroll">
+    <div class="login-hero">
+      <div class="login-logo">💪</div>
+      <div class="login-title">筋トレレイド</div>
+      <div class="login-sub">筋トレ仲間を見つけて<br>毎日一緒にモンスターを倒そう</div>
+    </div>
+    <div class="login-feats">
+      <div class="feat"><div class="feat-dot" style="background:var(--bll)">👥</div><div class="feat-txt"><strong>同じ目標の仲間</strong>と一緒に続けられる</div></div>
+      <div class="feat"><div class="feat-dot" style="background:var(--gl)">📝</div><div class="feat-txt"><strong>記録するだけ</strong>でレイドに自動貢献</div></div>
+      <div class="feat"><div class="feat-dot" style="background:var(--pul)">🏆</div><div class="feat-txt"><strong>レベルアップ</strong>で上級レイドに挑戦</div></div>
+    </div>
+    <div style="height:.5px;background:var(--bd);margin:0 28px"></div>
+    <div class="login-btns">
+      <div class="login-btn-t">はじめる</div>
+      <div id="login-btn-1" role="button" onclick="openProfile()" style="width:100%;background:#fff;border:1px solid rgba(0,0,0,.16);border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:#1a1a18;margin-bottom:10px;cursor:pointer;box-sizing:border-box;-webkit-tap-highlight-color:rgba(0,0,0,.1)">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M19.6 10.23c0-.68-.06-1.36-.18-2H10v3.79h5.39a4.6 4.6 0 01-2 3.02v2.51h3.23c1.89-1.74 2.98-4.3 2.98-7.32z" fill="#4285F4"/><path d="M10 20c2.7 0 4.97-.9 6.62-2.44l-3.23-2.51c-.9.6-2.04.96-3.39.96-2.6 0-4.8-1.76-5.59-4.12H1.08v2.6A10 10 0 0010 20z" fill="#34A853"/><path d="M4.41 11.89A6 6 0 014.1 10c0-.65.11-1.28.31-1.89V5.51H1.08A10 10 0 000 10c0 1.61.39 3.13 1.08 4.49l3.33-2.6z" fill="#FBBC05"/><path d="M10 3.96c1.47 0 2.79.5 3.83 1.5l2.87-2.87C14.96.99 12.69 0 10 0A10 10 0 001.08 5.51l3.33 2.6C5.2 5.72 7.4 3.96 10 3.96z" fill="#EA4335"/></svg>
+        Googleでログイン
+      </div>
+      <div id="login-btn-2" role="button" onclick="openProfile()" style="width:100%;background:#F2F0EA;border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:#6b6b67;text-align:center;cursor:pointer;box-sizing:border-box;margin-bottom:4px;-webkit-tap-highlight-color:rgba(0,0,0,.1)">ゲストとして試す</div>
+      <div class="login-terms"><a href="#">利用規約</a>および<a href="#">プライバシーポリシー</a>に同意します</div>
+    </div>
   </div>
 </div>
+
+<!-- HOME -->
+<div class="scr off" id="s-home">
+  <div class="home-hdr">
+    <div class="home-top">
+      <div class="home-appname">筋トレレイド</div>
+      <div class="home-av" id="home-av" onclick="goTo('mypage')">🐼</div>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-v" id="h-lv">Lv.1</div><div class="stat-l">レベル</div></div>
+      <div class="stat"><div class="stat-v" id="h-dmg">0</div><div class="stat-l">今日のダメージ</div></div>
+      <div class="stat"><div class="stat-v" id="h-streak">1日</div><div class="stat-l">連続記録</div></div>
+    </div>
+  </div>
+  <div class="scroll">
+    <div class="home-section">
+      <div class="card mission-card">
+        <div><div class="mis-title">今日のミッション</div><div class="mis-sub" id="mis-sub">筋トレを3セット記録しよう</div></div>
+        <div class="mis-badge" id="mis-badge">0/3</div>
+      </div>
+    </div>
+    <div class="home-section" style="margin-top:4px">
+      <div class="sec-lbl">クイック記録</div>
+      <div class="qr-grid" id="qr-grid"></div>
+      <button onclick="goTo('record')" style="width:100%;background:var(--bg);border:.5px solid var(--bd2);border-radius:var(--rs);padding:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;margin-bottom:4px">📋 詳細記録を開く</button>
+    </div>
+    <div class="home-section" style="margin-top:4px">
+      <div class="sec-lbl">今日のレイド（3本開催中）</div>
+      <div id="home-raids"></div>
+    </div>
+    <div class="home-section" style="margin-top:4px">
+      <div class="sec-lbl">みんなの活動</div>
+      <div id="activity-feed"></div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="tabbar">
+    <div class="tab on" onclick="goTo('home')"><svg viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="#3B6D11" stroke-width="1.5" fill="none"/></svg><div class="tab-lbl" style="color:var(--g)">ホーム</div></div>
+    <div class="tab" onclick="goTo('record')"><svg viewBox="0 0 22 22" fill="none"><rect x="4" y="3" width="14" height="16" rx="2" stroke="var(--t3)" stroke-width="1.5"/><path d="M8 8h6M8 12h6M8 16h4" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">記録</div></div>
+    <div class="tab" onclick="goTo('friends')"><svg viewBox="0 0 22 22" fill="none"><circle cx="8" cy="8" r="3" stroke="var(--t3)" stroke-width="1.5"/><path d="M2 18c0-3 2.686-5 6-5" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="9" r="2.5" stroke="var(--t3)" stroke-width="1.5"/><path d="M12 18c0-2.5 1.79-4 4-4s4 1.5 4 4" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">仲間</div></div>
+    <div class="tab" onclick="goTo('raids')"><svg viewBox="0 0 22 22" fill="none"><path d="M11 3l2.5 5 5.5.8-4 3.9.9 5.5L11 15.7 6.1 18.2l.9-5.5L3 8.8l5.5-.8z" stroke="var(--t3)" stroke-width="1.5" stroke-linejoin="round" fill="none"/></svg><div class="tab-lbl">レイド</div></div>
+    <div class="tab" onclick="goTo('mypage')"><svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3" stroke="var(--t3)" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">マイページ</div></div>
+  </div>
+</div>
+
+<!-- RECORD -->
+<div class="scr off" id="s-record">
+  <div class="topbar"><div class="topbar-row"><div class="topbar-title">筋トレ記録</div><button onclick="saveRecord()" style="background:var(--g);border:none;border-radius:99px;padding:6px 16px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#fff;cursor:pointer" id="save-rec-btn">保存してレイドへ</button></div></div>
+  <div class="scroll">
+    <div class="card streak-card" style="margin:12px 14px 0">
+      <div class="streak-left"><div style="font-size:28px">🔥</div><div><div class="streak-num" id="rc-streak">1日</div><div class="streak-lbl">連続記録中</div></div></div>
+      <div class="streak-bonus" id="rc-bonus">ボーナスなし</div>
+    </div>
+    <div style="padding:12px 14px 0">
+      <div class="sec-lbl">今日の記録を入力</div>
+      <div id="exercise-inputs"></div>
+    </div>
+    <div style="padding:0 14px">
+      <div class="sec-lbl" style="margin-bottom:10px">今日の記録ログ</div>
+      <div id="log-list"><div style="text-align:center;padding:24px 0;font-size:14px;color:var(--t3)">まだ記録がありません</div></div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="tabbar">
+    <div class="tab" onclick="goTo('home')"><svg viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="var(--t3)" stroke-width="1.5" fill="none"/></svg><div class="tab-lbl">ホーム</div></div>
+    <div class="tab on" onclick="goTo('record')"><svg viewBox="0 0 22 22" fill="none"><rect x="4" y="3" width="14" height="16" rx="2" stroke="#3B6D11" stroke-width="1.5"/><path d="M8 8h6M8 12h6M8 16h4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl" style="color:var(--g)">記録</div></div>
+    <div class="tab" onclick="goTo('friends')"><svg viewBox="0 0 22 22" fill="none"><circle cx="8" cy="8" r="3" stroke="var(--t3)" stroke-width="1.5"/><path d="M2 18c0-3 2.686-5 6-5" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="9" r="2.5" stroke="var(--t3)" stroke-width="1.5"/><path d="M12 18c0-2.5 1.79-4 4-4s4 1.5 4 4" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">仲間</div></div>
+    <div class="tab" onclick="goTo('raids')"><svg viewBox="0 0 22 22" fill="none"><path d="M11 3l2.5 5 5.5.8-4 3.9.9 5.5L11 15.7 6.1 18.2l.9-5.5L3 8.8l5.5-.8z" stroke="var(--t3)" stroke-width="1.5" stroke-linejoin="round" fill="none"/></svg><div class="tab-lbl">レイド</div></div>
+    <div class="tab" onclick="goTo('mypage')"><svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3" stroke="var(--t3)" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">マイページ</div></div>
+  </div>
+</div>
+
+<!-- FRIENDS -->
+<div class="scr off" id="s-friends">
+  <div class="topbar"><div class="topbar-row"><div class="topbar-title">仲間</div><span style="font-size:13px;color:var(--t2);font-weight:600">筋トレ仲間を見つけよう</span></div></div>
+  <div class="filter-row" id="friends-filter">
+    <div class="f-chip on" onclick="setFriendFilter('all',this)">すべて</div>
+    <div class="f-chip" onclick="setFriendFilter('diet',this)">ダイエット</div>
+    <div class="f-chip" onclick="setFriendFilter('muscle',this)">筋力アップ</div>
+    <div class="f-chip" onclick="setFriendFilter('health',this)">健康維持</div>
+    <div class="f-chip" onclick="setFriendFilter('beginner',this)">初心者</div>
+  </div>
+  <div class="scroll">
+    <div style="padding:12px 14px 0">
+      <div class="sec-lbl">おすすめの仲間</div>
+      <div id="friends-list"></div>
+    </div>
+    <div style="padding:4px 14px 0">
+      <div class="sec-lbl">みんなの活動</div>
+      <div id="friends-feed"></div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="tabbar">
+    <div class="tab" onclick="goTo('home')"><svg viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="var(--t3)" stroke-width="1.5" fill="none"/></svg><div class="tab-lbl">ホーム</div></div>
+    <div class="tab" onclick="goTo('record')"><svg viewBox="0 0 22 22" fill="none"><rect x="4" y="3" width="14" height="16" rx="2" stroke="var(--t3)" stroke-width="1.5"/><path d="M8 8h6M8 12h6M8 16h4" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">記録</div></div>
+    <div class="tab on" onclick="goTo('friends')"><svg viewBox="0 0 22 22" fill="none"><circle cx="8" cy="8" r="3" stroke="#3B6D11" stroke-width="1.5"/><path d="M2 18c0-3 2.686-5 6-5" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="9" r="2.5" stroke="#3B6D11" stroke-width="1.5"/><path d="M12 18c0-2.5 1.79-4 4-4s4 1.5 4 4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl" style="color:var(--g)">仲間</div></div>
+    <div class="tab" onclick="goTo('raids')"><svg viewBox="0 0 22 22" fill="none"><path d="M11 3l2.5 5 5.5.8-4 3.9.9 5.5L11 15.7 6.1 18.2l.9-5.5L3 8.8l5.5-.8z" stroke="var(--t3)" stroke-width="1.5" stroke-linejoin="round" fill="none"/></svg><div class="tab-lbl">レイド</div></div>
+    <div class="tab" onclick="goTo('mypage')"><svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3" stroke="var(--t3)" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">マイページ</div></div>
+  </div>
+</div>
+
+<!-- RAIDS LIST -->
+<div class="scr off" id="s-raids">
+  <div class="topbar"><div class="topbar-row"><div class="topbar-title">レイド</div><span style="font-size:12px;color:var(--t2);font-weight:600">毎日3本開催</span></div></div>
+  <div class="scroll">
+    <div style="padding:12px 14px 0" id="raids-list"></div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="tabbar">
+    <div class="tab" onclick="goTo('home')"><svg viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="var(--t3)" stroke-width="1.5" fill="none"/></svg><div class="tab-lbl">ホーム</div></div>
+    <div class="tab" onclick="goTo('record')"><svg viewBox="0 0 22 22" fill="none"><rect x="4" y="3" width="14" height="16" rx="2" stroke="var(--t3)" stroke-width="1.5"/><path d="M8 8h6M8 12h6M8 16h4" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">記録</div></div>
+    <div class="tab" onclick="goTo('friends')"><svg viewBox="0 0 22 22" fill="none"><circle cx="8" cy="8" r="3" stroke="var(--t3)" stroke-width="1.5"/><path d="M2 18c0-3 2.686-5 6-5" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="9" r="2.5" stroke="var(--t3)" stroke-width="1.5"/><path d="M12 18c0-2.5 1.79-4 4-4s4 1.5 4 4" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">仲間</div></div>
+    <div class="tab on" onclick="goTo('raids')"><svg viewBox="0 0 22 22" fill="none"><path d="M11 3l2.5 5 5.5.8-4 3.9.9 5.5L11 15.7 6.1 18.2l.9-5.5L3 8.8l5.5-.8z" stroke="#3B6D11" stroke-width="1.5" stroke-linejoin="round" fill="none"/></svg><div class="tab-lbl" style="color:var(--g)">レイド</div></div>
+    <div class="tab" onclick="goTo('mypage')"><svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3" stroke="var(--t3)" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">マイページ</div></div>
+  </div>
+</div>
+
+<!-- RAID DETAIL -->
+<div class="scr off" id="s-raid">
+  <div class="raid-hdr">
+    <button class="back-btn" onclick="goBack()"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--t2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="topbar-title" id="rd-title">レイド詳細</div>
+    <div class="badge" id="rd-badge" style="margin-left:auto">中級</div>
+  </div>
+  <div class="scroll">
+    <div class="monster-hero">
+      <div class="mh-row">
+        <div class="mh-icon" id="rd-icon-bg"><span id="rd-icon">👹</span></div>
+        <div>
+          <div class="mh-name" id="rd-name">アイアンゴブリン</div>
+          <div class="mh-sub" id="rd-sub">中級レイドボス</div>
+          <div class="mh-chips"><div class="mh-chip" id="rd-time">⏱ 残り 18時間</div><div class="mh-chip" id="rd-parts">👥 24人参加中</div></div>
+        </div>
+      </div>
+      <div class="mh-hp-hdr"><div class="mh-hp-lbl">HP</div><div class="mh-hp-num" id="rd-hp-num">6800 / 12000</div></div>
+      <div class="hp-track" style="height:8px"><div class="hp-fill hp-mid" id="rd-hp-bar" style="width:57%"></div></div>
+    </div>
+    <div class="card contrib-card">
+      <div><div class="contrib-lbl">あなたの貢献ダメージ</div><div class="contrib-limit" id="rd-limit-txt">上限まであと 500</div></div>
+      <div class="contrib-v" id="rd-my-dmg">0</div>
+    </div>
+    <div class="limit-wrap"><div class="limit-track"><div class="limit-fill" id="rd-limit-bar" style="width:0%"></div></div></div>
+    <div class="attack-section">
+      <div class="sec-lbl" style="margin-bottom:10px">筋トレして攻撃する</div>
+      <div class="attack-grid">
+        <button class="attack-btn" id="atk-sq" onclick="doAtk('sq',50,30,'スクワット','atk-sq','acd-sq')"><div class="attack-icon">🦵</div><div class="attack-name">スクワット10回</div><div class="attack-dmg">+50 ダメージ</div><div class="attack-cd" id="acd-sq"></div></button>
+        <button class="attack-btn" id="atk-pu" onclick="doAtk('pu',60,30,'腕立て','atk-pu','acd-pu')"><div class="attack-icon">💪</div><div class="attack-name">腕立て10回</div><div class="attack-dmg">+60 ダメージ</div><div class="attack-cd" id="acd-pu"></div></button>
+        <button class="attack-btn" id="atk-pl" onclick="doAtk('pl',40,35,'プランク','atk-pl','acd-pl')"><div class="attack-icon">🧘</div><div class="attack-name">プランク30秒</div><div class="attack-dmg">+40 ダメージ</div><div class="attack-cd" id="acd-pl"></div></button>
+        <button class="attack-btn" id="atk-ab" onclick="doAtk('ab',40,28,'腹筋','atk-ab','acd-ab')"><div class="attack-icon">🔥</div><div class="attack-name">腹筋10回</div><div class="attack-dmg">+40 ダメージ</div><div class="attack-cd" id="acd-ab"></div></button>
+      </div>
+    </div>
+    <div class="raid-participants">
+      <div class="sec-lbl" style="margin-bottom:10px">参加中の仲間</div>
+      <div id="raid-parts-list"></div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+</div>
+
+<!-- MYPAGE -->
+<div class="scr off" id="s-mypage">
+  <div class="topbar"><div class="topbar-row"><div class="topbar-title">マイページ</div><button onclick="goTo('home')" style="font-size:13px;font-weight:700;color:var(--bl);background:none;border:none;cursor:pointer;font-family:'Nunito',sans-serif">完了</button></div></div>
+  <div class="scroll">
+    <div class="prof-card">
+      <div class="prof-top">
+        <div class="prof-av-wrap"><div class="prof-av" id="prof-av">🐼</div><div class="prof-lv" id="prof-lv-b">Lv.1</div></div>
+        <div style="flex:1">
+          <div class="prof-name" id="prof-name">FitPanda</div>
+          <div class="prof-since" id="prof-goal">目標：健康維持</div>
+          <div class="xp-hdr"><span class="xp-lbl" id="xp-lbl">Lv.1 → Lv.2</span><span class="xp-val" id="xp-val">0 / 100 XP</span></div>
+          <div class="xp-track"><div class="xp-fill" id="xp-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="prof-stats">
+        <div class="ps"><div class="ps-v" id="ps-dmg">0</div><div class="ps-l">総ダメージ</div></div>
+        <div class="ps"><div class="ps-v" id="ps-streak">1日</div><div class="ps-l">連続記録</div></div>
+        <div class="ps"><div class="ps-v" id="ps-sets">0</div><div class="ps-l">総セット数</div></div>
+      </div>
+    </div>
+    <div class="my-sec">
+      <div class="my-sec-lbl">解放済みレイド</div>
+      <div id="raid-unlock-status"></div>
+    </div>
+    <div class="my-sec">
+      <div class="my-sec-lbl">装備中アイテム</div>
+      <div class="equip-grid">
+        <div class="equip-card"><div class="eq-icon" style="background:var(--gl)">🥊</div><div><div class="eq-name">初心者グローブ</div><div class="eq-bonus">腕トレ +5%</div></div></div>
+        <div class="equip-card"><div class="eq-icon" style="background:var(--al)">👟</div><div><div class="eq-name">トレーニングシューズ</div><div class="eq-bonus">脚トレ +5%</div></div></div>
+        <div class="equip-card"><div class="eq-icon" style="background:var(--bg)">＋</div><div><div class="eq-empty">未装備</div></div></div>
+        <div class="equip-card"><div class="eq-icon" style="background:var(--bg)">＋</div><div><div class="eq-empty">未装備</div></div></div>
+      </div>
+    </div>
+    <div class="my-sec">
+      <div class="my-sec-lbl">クイック記録の設定</div>
+      <div id="qr-settings"></div>
+      <div style="font-size:12px;color:var(--t3);margin-top:6px;padding:0 2px">種目・回数を自由に設定できます</div>
+    </div>
+    <div class="my-sec">
+      <div class="my-sec-lbl">自作種目の管理</div>
+      <div id="custom-ex-list"></div>
+    <div class="my-sec">
+      <div class="my-sec-lbl">実績</div>
+      <div class="ach-row"><div class="ach-ico done">🏅</div><div style="flex:1"><div class="ach-name">最初の一歩</div><div class="ach-desc">初めて筋トレを記録した</div></div><div class="ach-ok">達成</div></div>
+      <div class="ach-row"><div class="ach-ico lock">🔥</div><div style="flex:1"><div class="ach-name">3日連続</div><div class="ach-desc">3日間連続で記録する</div></div><div class="ach-no">未達成</div></div>
+      <div class="ach-row"><div class="ach-ico lock">⚔️</div><div style="flex:1"><div class="ach-name">中級挑戦</div><div class="ach-desc">Lv3になり中級レイドに参加</div></div><div class="ach-no" id="ach-mid">Lv1/3</div></div>
+      <div class="ach-row"><div class="ach-ico lock">🐉</div><div style="flex:1"><div class="ach-name">上級挑戦</div><div class="ach-desc">Lv5になり上級レイドに参加</div></div><div class="ach-no" id="ach-hard">Lv1/5</div></div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="tabbar">
+    <div class="tab" onclick="goTo('home')"><svg viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="var(--t3)" stroke-width="1.5" fill="none"/></svg><div class="tab-lbl">ホーム</div></div>
+    <div class="tab" onclick="goTo('record')"><svg viewBox="0 0 22 22" fill="none"><rect x="4" y="3" width="14" height="16" rx="2" stroke="var(--t3)" stroke-width="1.5"/><path d="M8 8h6M8 12h6M8 16h4" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">記録</div></div>
+    <div class="tab" onclick="goTo('friends')"><svg viewBox="0 0 22 22" fill="none"><circle cx="8" cy="8" r="3" stroke="var(--t3)" stroke-width="1.5"/><path d="M2 18c0-3 2.686-5 6-5" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="9" r="2.5" stroke="var(--t3)" stroke-width="1.5"/><path d="M12 18c0-2.5 1.79-4 4-4s4 1.5 4 4" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">仲間</div></div>
+    <div class="tab" onclick="goTo('raids')"><svg viewBox="0 0 22 22" fill="none"><path d="M11 3l2.5 5 5.5.8-4 3.9.9 5.5L11 15.7 6.1 18.2l.9-5.5L3 8.8l5.5-.8z" stroke="var(--t3)" stroke-width="1.5" stroke-linejoin="round" fill="none"/></svg><div class="tab-lbl">レイド</div></div>
+    <div class="tab on" onclick="goTo('mypage')"><svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3" stroke="#3B6D11" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl" style="color:var(--g)">マイページ</div></div>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="modal-bg" id="prof-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">プロフィール設定</div>
+    <div class="modal-sub">ニックネームとアバターを選んでください</div>
+    <div class="inp-wrap"><div class="inp-lbl">ニックネーム（2〜12文字）</div><input type="text" class="tinp" id="nick-inp" placeholder="例：FitPanda" maxlength="12" oninput="checkNick()"></div>
+    <div class="inp-lbl" style="margin-bottom:10px">アバター</div>
+    <div class="av-grid">
+      <div class="av-opt av1 sel" onclick="selAv(this,'🐼')">🐼</div>
+      <div class="av-opt av2" onclick="selAv(this,'🦊')">🦊</div>
+      <div class="av-opt av3" onclick="selAv(this,'🐯')">🐯</div>
+      <div class="av-opt av4" onclick="selAv(this,'🐺')">🐺</div>
+      <div class="av-opt av5" onclick="selAv(this,'🦁')">🦁</div>
+    </div>
+    <div class="inp-lbl" style="margin-bottom:10px">目標を選んでください</div>
+    <div class="goal-grid">
+      <div class="goal-btn sel" id="goal-diet" onclick="selGoal(this,'diet','ダイエット')"><div class="goal-btn-icon">🏃</div><div class="goal-btn-name">ダイエット</div></div>
+      <div class="goal-btn" id="goal-muscle" onclick="selGoal(this,'muscle','筋力アップ')"><div class="goal-btn-icon">💪</div><div class="goal-btn-name">筋力アップ</div></div>
+      <div class="goal-btn" id="goal-health" onclick="selGoal(this,'health','健康維持')"><div class="goal-btn-icon">❤️</div><div class="goal-btn-name">健康維持</div></div>
+      <div class="goal-btn" id="goal-habit" onclick="selGoal(this,'habit','習慣化')"><div class="goal-btn-icon">📅</div><div class="goal-btn-name">習慣化したい</div></div>
+    </div>
+    <button class="btn-p" id="btn-start" onclick="startGame()">冒険をはじめる 💪</button>
+  </div>
+</div>
+
+<!-- RAID SELECT MODAL -->
+<div class="modal-bg" id="raid-select-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">レイドに送る</div>
+    <div class="modal-sub" id="rsm-summary">合計ダメージ 0 · XP +0</div>
+    <div id="raid-choices"></div>
+    <button onclick="document.getElementById('raid-select-modal').classList.remove('show')" style="width:100%;background:none;border:.5px solid var(--bd2);border-radius:var(--r);padding:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--t2);cursor:pointer;margin-top:4px">あとで選ぶ</button>
+  </div>
+</div>
+
+<!-- ADD QR MODAL -->
+<div class="modal-bg" id="add-qr-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">クイック記録に追加</div>
+    <div class="modal-sub">追加したい種目を選んでください</div>
+    <div id="add-qr-options"></div>
+  </div>
+</div>
+
+<!-- CUSTOM EXERCISE MODAL -->
+<div class="modal-bg" id="custom-ex-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">自作種目を作る</div>
+    <div class="modal-sub">オリジナルの種目をクイック記録に追加できます</div>
+    <div class="inp-wrap">
+      <div class="inp-lbl">種目名</div>
+      <input type="text" class="tinp" id="custom-ex-name" placeholder="例：ベンチプレス、懸垂、ヨガ">
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div style="flex:1">
+        <div class="inp-lbl">デフォルトの量</div>
+        <input type="number" class="tinp" id="custom-ex-val" placeholder="10" min="1">
+      </div>
+      <div style="flex:1">
+        <div class="inp-lbl">単位</div>
+        <select id="custom-ex-unit" style="width:100%;border:1px solid var(--bd2);border-radius:var(--rs);padding:12px 14px;font-size:15px;font-family:'Nunito',sans-serif;font-weight:600;color:var(--tx);background:var(--ca);outline:none">
+          <option value="rep">回</option>
+          <option value="sec">秒</option>
+          <option value="km">km</option>
+          <option value="min">分</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-p" onclick="saveCustomExercise()">作成してクイック記録に追加 ✓</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-function goHome(){
-  document.getElementById('s-login').classList.add('off');
-  document.getElementById('s-home').classList.remove('off');
+var cur='login', prev='home';
+var avatar='🐼', nick='FitPanda', userGoal='diet', goalLabel='ダイエット';
+var lv=1, exp=0, streak=1;
+var totalDmg=0, totalSets=0;
+var todayDmg=0, todayXp=0, todaySets=0;
+var cds={};
+var logs=[];
+var following=[];
+var pendingDmg=0, pendingXp=0;
+var currentRaidIdx=0;
+var lvThr=[0,100,250,450,700,1000,1400,1900,2500,3200];
+
+var exercises=[
+  {id:'sq',icon:'🦵',name:'スクワット',unit:'回',dmgPer10:50,xpPer10:10,val:0},
+  {id:'pu',icon:'💪',name:'腕立て伏せ',unit:'回',dmgPer10:60,xpPer10:12,val:0},
+  {id:'ab',icon:'🔥',name:'腹筋',unit:'回',dmgPer10:45,xpPer10:9,val:0},
+  {id:'pl',icon:'🧘',name:'プランク',unit:'秒',dmgPer10:40,xpPer10:8,val:0,per:30},
+  {id:'rn',icon:'🏃',name:'ランニング',unit:'km',dmgPer10:80,xpPer10:16,val:0,per:1}
+];
+
+var raids=[
+  {id:0,icon:'🐉',bg:'#EAF3DE',name:'フォレストスライム',diff:'easy',diffLbl:'初級',minLv:1,maxHp:5000,hp:3600,parts:8,rewardXp:30,rewardRare:'コモン装備',lockMsg:''},
+  {id:1,icon:'👹',bg:'#FAEEDA',name:'アイアンゴブリン',diff:'mid',diffLbl:'中級',minLv:3,maxHp:12000,hp:6800,parts:16,rewardXp:50,rewardRare:'アンコモン装備',lockMsg:'Lv3で解放'},
+  {id:2,icon:'🐉',bg:'#FCEBEB',name:'フレイムドラゴン',diff:'hard',diffLbl:'上級',minLv:5,maxHp:25000,hp:18000,parts:24,rewardXp:80,rewardRare:'レア装備',lockMsg:'Lv5で解放'}
+];
+var myRaidDmg=[0,0,0];
+var raidLimit=500;
+
+var friends=[
+  {id:1,av:'🦊',name:'mika',goal:'diet',goalLbl:'ダイエット',lv:4,activity:'今日：脚トレ達成',following:false,cheers:3},
+  {id:2,av:'🐯',name:'ryo',goal:'muscle',goalLbl:'筋力アップ',lv:6,activity:'今日：中級レイド参加',following:false,cheers:1},
+  {id:3,av:'🐺',name:'sora',goal:'health',goalLbl:'健康維持',lv:2,activity:'今日：7日連続達成！',following:false,cheers:5},
+  {id:4,av:'🦁',name:'ken',goal:'habit',goalLbl:'習慣化',lv:3,activity:'今日：スクワット30回',following:false,cheers:2},
+  {id:5,av:'🐼',name:'yuki',goal:'diet',goalLbl:'ダイエット',lv:5,activity:'今日：上級レイド解放！',following:false,cheers:0}
+];
+var friendFilter='all';
+
+var activityLog=[
+  {av:'🦊',name:'mika',txt:'が今日のミッションを達成',time:'5分前',raidId:-1},
+  {av:'🐯',name:'ryo',txt:'が中級レイドに貢献 +180ダメ',time:'12分前',raidId:1},
+  {av:'🐺',name:'sora',txt:'が7日連続記録を達成！',time:'28分前',raidId:-1},
+  {av:'🦁',name:'ken',txt:'がフォレストスライムに参加',time:'45分前',raidId:0}
+];
+
+var otherRows=[];
+var customExercises=[];
+
+var qrSettings=[
+  {id:'sq',icon:'🦵',name:'スクワット',amount:10,unit:'回'},
+  {id:'pu',icon:'💪',name:'腕立て',amount:10,unit:'回'},
+  {id:'pl',icon:'🧘',name:'プランク',amount:30,unit:'秒'}
+];
+
+// NAV
+function goTo(s){
+  var ids={home:'s-home',record:'s-record',friends:'s-friends',raids:'s-raids',raid:'s-raid',mypage:'s-mypage'};
+  var id=ids[s]; if(!id||cur===s)return;
+  var c=document.getElementById('s-'+cur);
+  if(c){c.classList.add('back');setTimeout(function(){c.classList.add('off');},280);}
+  var n=document.getElementById(id);
+  n.classList.remove('off','back');
+  prev=cur; cur=s;
+  if(s==='mypage')rendMypage();
+  if(s==='record')rendRecord();
+  if(s==='friends')rendFriends();
+  if(s==='raids')rendRaidsList();
+  if(s==='home')rendHome();
 }
+function goBack(){
+  var c=document.getElementById('s-'+cur);
+  var p=document.getElementById('s-'+prev);
+  if(c)c.classList.add('off');
+  if(p)p.classList.remove('off','back');
+  cur=prev; prev='home';
+}
+
+// LOGIN
+function openProfile(){document.getElementById('prof-modal').classList.add('show');}
+function selAv(el,e){document.querySelectorAll('.av-opt').forEach(function(a){a.classList.remove('sel')});el.classList.add('sel');avatar=e;}
+function selGoal(el,g,lbl){document.querySelectorAll('.goal-btn').forEach(function(b){b.classList.remove('sel')});el.classList.add('sel');userGoal=g;goalLabel=lbl;}
+function checkNick(){
+  var v=document.getElementById('nick-inp').value.trim();
+  var btn=document.getElementById('btn-start');
+  if(btn){btn.style.opacity=v.length<2?'0.5':'1';}
+}
+function startGame(){
+  var v=document.getElementById('nick-inp').value.trim();
+  if(v.length<2){showToast('ニックネームを2文字以上入力してください');return;}
+  nick=v;
+  document.getElementById('prof-modal').classList.remove('show');
+  var lg=document.getElementById('s-login');
+  lg.classList.add('back');
+  setTimeout(function(){lg.classList.add('off');},280);
+  var h=document.getElementById('s-home');
+  h.classList.remove('off','back');
+  cur='home';
+  rendHome();
+  showToast('ようこそ、'+nick+'！仲間と一緒に頑張ろう💪');
+}
+
+// HOME RENDER
+function rendHome(){
+  document.getElementById('home-av').textContent=avatar;
+  document.getElementById('h-lv').textContent='Lv.'+lv;
+  document.getElementById('h-dmg').textContent=todayDmg;
+  document.getElementById('h-streak').textContent=streak+'日';
+  document.getElementById('mis-badge').textContent=Math.min(3,todaySets)+'/3';
+  rendQrGrid();
+  rendHomeRaids();
+  rendActivityFeed();
+}
+
+function rendQrGrid(){
+  var slots=qrSettings.length;
+  var html='';
+  for(var i=0;i<slots&&i<qrSettings.length;i++){
+    var q=qrSettings[i];
+    var cdId='qcd-'+q.id+i;
+    var btnId='qr-'+q.id+i;
+    html+='<button class="qr-btn" id="'+btnId+'" onclick="quickRec(\''+q.id+'\','+calcDmg(q.id,q.amount)+',30,\''+q.name+'\',\''+btnId+'\',\''+cdId+'\')">';
+    html+='<div class="qr-icon">'+q.icon+'</div>';
+    html+='<div class="qr-name">'+q.name+' '+q.amount+q.unit+'</div>';
+    html+='<div class="qr-dmg">+'+calcDmg(q.id,q.amount)+' ダメ</div>';
+    html+='<div class="qr-cd" id="'+cdId+'"></div></button>';
+  }
+  document.getElementById('qr-grid').innerHTML=html;
+}
+
+function removeCustomEx(i){
+  customExercises.splice(i,1);
+  rendMypage();showToast('削除しました');
+}
+
+function calcDmg(id,amount){
+  var ex=exercises.find(function(e){return e.id===id;});
+  if(ex){var per=ex.per||10;return Math.round((amount/per)*ex.dmgPer10);}
+  var cx=customExercises.find(function(c){return c.id===id;});
+  if(cx){return Math.round((amount/cx.defaultVal)*cx.dmgPer);}
+  return 40;
+}
+function calcXp(id,amount){
+  var ex=exercises.find(function(e){return e.id===id;});
+  if(ex){var per=ex.per||10;return Math.round((amount/per)*ex.xpPer10);}
+  return Math.round(calcDmg(id,amount)*0.2);
+}
+
+function rendHomeRaids(){
+  var html='';
+  raids.forEach(function(r,i){
+    var pct=Math.round(r.hp/r.maxHp*100);
+    var locked=lv<r.minLv;
+    var hpClass=pct>50?'hp-mid':'hp-low';
+    html+='<div class="card raid-mini'+(locked?' rm-locked':'')+'" onclick="'+(locked?'':'openRaid('+i+')')+'">'+
+      '<div class="rm-icon" style="background:'+r.bg+'">'+r.icon+'</div>'+
+      '<div class="rm-info">'+
+        '<div class="rm-name">'+r.name+'</div>'+
+        '<div class="rm-badges"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span>'+(locked?'<span class="badge" style="background:var(--rl);color:#A32D2D">'+r.lockMsg+'</span>':'')+'</div>'+
+        '<div class="hp-track" style="height:5px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
+      '</div>'+
+      '<div class="rm-time'+(r.hp/r.maxHp<0.2?' urgent':'')+'">HP '+pct+'%<br>'+r.parts+'人</div>'+
+    '</div>';
+  });
+  document.getElementById('home-raids').innerHTML=html;
+}
+
+function rendActivityFeed(){
+  var html=activityLog.map(function(a){
+    return '<div class="act-row">'+
+      '<div class="act-av" style="background:var(--gl)">'+a.av+'</div>'+
+      '<div class="act-txt"><strong>'+a.name+'さん</strong>'+a.txt+'</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
+        '<div class="act-time">'+a.time+'</div>'+
+        (a.raidId>=0?'<button class="cheer-btn" onclick="cheerAction(\''+a.name+'\')">応援</button>':'')+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('activity-feed').innerHTML=html;
+}
+
+// QUICK RECORD
+function quickRec(type,dmg,cd,label,btnId,cdId){
+  if(cds[btnId])return;
+  addDmg(dmg,type,label,1);
+  startCd(btnId,cdId,cd,true);
+  floatDmg(dmg);
+  showToast(label+' ！ +'+dmg+'ダメージ！');
+  rendHome();
+}
+
+// RECORD SCREEN
+function rendRecord(){
+  document.getElementById('rc-streak').textContent=streak+'日';
+  document.getElementById('rc-bonus').textContent=streak>=14?'14日: +20%':streak>=7?'7日: +10%':streak>=3?'3日: +5%':'ボーナスなし';
+  var html='';
+  exercises.forEach(function(ex){
+    html+='<div class="ex-card">'+
+      '<div class="ex-header">'+
+        '<div class="ex-icon">'+ex.icon+'</div>'+
+        '<div class="ex-name">'+ex.name+'</div>'+
+        '<div class="ex-unit">'+ex.unit+'単位</div>'+
+      '</div>'+
+      '<div class="num-row">'+
+        '<button class="num-btn" onclick="chVal(\''+ex.id+'\',-'+(ex.per||10)+')">−</button>'+
+        '<input class="num-inp" id="inp-'+ex.id+'" type="number" value="0" min="0" max="9999" oninput="updVal(\''+ex.id+'\',this.value)">'+
+        '<button class="num-btn" onclick="chVal(\''+ex.id+'\','+(ex.per||10)+')">＋</button>'+
+      '</div>'+
+      '<div style="font-size:11px;font-weight:600;color:var(--gm);margin-top:8px;text-align:center" id="ex-preview-'+ex.id+'">0 ダメージ予定</div>'+
+    '</div>';
+  });
+  html+='<div class="ex-card" style="border:1px dashed var(--bd2)">'+
+    '<div class="ex-header">'+
+      '<div class="ex-icon">✏️</div>'+
+      '<div class="ex-name">その他のトレーニング</div>'+
+      '<div class="ex-unit" style="font-size:10px;color:var(--t3)">自由入力</div>'+
+    '</div>'+
+    '<div id="other-list"></div>'+
+    '<button onclick="addOtherRow()" style="width:100%;background:var(--bg);border:.5px dashed var(--bd2);border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;margin-top:8px">＋ 種目を追加</button>'+
+  '</div>';
+  document.getElementById('exercise-inputs').innerHTML=html;
+  rendOtherList();
+  rendLogList();
+}
+
+function rendOtherList(){
+  var el=document.getElementById('other-list');
+  if(!el)return;
+  if(otherRows.length===0){el.innerHTML='<div style="font-size:12px;color:var(--t3);text-align:center;padding:8px 0">「＋ 種目を追加」で自由に記録できます</div>';return;}
+  el.innerHTML=otherRows.map(function(r,i){
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+      '<input type="text" placeholder="種目名（例：ベンチプレス）" value="'+r.name+'" oninput="otherRows['+i+'].name=this.value" style="flex:2;border:.5px solid var(--bd2);border-radius:var(--rs);padding:9px 10px;font-size:13px;font-family:\'Nunito\',sans-serif;font-weight:600;color:var(--tx);background:var(--ca);outline:none">'+
+      '<input type="number" placeholder="数" value="'+r.val+'" oninput="otherRows['+i+'].val=parseInt(this.value)||0" style="flex:1;border:.5px solid var(--bd2);border-radius:var(--rs);padding:9px 8px;font-size:13px;font-family:\'Nunito\',sans-serif;font-weight:700;color:var(--tx);background:var(--ca);outline:none;text-align:center">'+
+      '<select onchange="otherRows['+i+'].unit=this.value" style="border:.5px solid var(--bd2);border-radius:var(--rs);padding:9px 6px;font-size:12px;font-family:\'Nunito\',sans-serif;font-weight:600;color:var(--tx);background:var(--ca);outline:none">'+
+        '<option value="rep"'+(r.unit==='rep'?' selected':'')+'>回</option>'+
+        '<option value="sec"'+(r.unit==='sec'?' selected':'')+'>秒</option>'+
+        '<option value="km"'+(r.unit==='km'?' selected':'')+'>km</option>'+
+        '<option value="min"'+(r.unit==='min'?' selected':'')+'>分</option>'+
+      '</select>'+
+      '<button onclick="removeOtherRow('+i+')" style="width:30px;height:30px;border-radius:50%;background:var(--rl);border:none;color:#A32D2D;font-size:16px;cursor:pointer;flex-shrink:0;font-weight:700">×</button>'+
+    '</div>';
+  }).join('');
+}
+
+function addOtherRow(){
+  otherRows.push({name:'',val:0,unit:'rep'});
+  rendOtherList();
+}
+function removeOtherRow(i){
+  otherRows.splice(i,1);
+  rendOtherList();
+}
+
+function chVal(id,d){
+  var ex=exercises.find(function(e){return e.id===id;});
+  if(!ex)return;
+  ex.val=Math.max(0,ex.val+d);
+  var inp=document.getElementById('inp-'+id);
+  if(inp)inp.value=ex.val;
+  updPreview(id);
+}
+function updVal(id,v){
+  var ex=exercises.find(function(e){return e.id===id;});
+  if(!ex)return;
+  ex.val=Math.max(0,parseInt(v)||0);
+  updPreview(id);
+}
+function updPreview(id){
+  var ex=exercises.find(function(e){return e.id===id;});
+  var dmg=calcDmg(id,ex.val);
+  var el=document.getElementById('ex-preview-'+id);
+  if(el)el.textContent=dmg+' ダメージ予定';
+}
+
+function saveRecord(){
+  var totalD=0, totalX=0, sets=0;
+  exercises.forEach(function(ex){
+    if(ex.val>0){
+      var d=calcDmg(ex.id,ex.val);
+      var x=calcXp(ex.id,ex.val);
+      totalD+=d; totalX+=x; sets++;
+      addDmg(d,ex.id,ex.name,Math.ceil(ex.val/(ex.per||10)));
+      ex.val=0;
+    }
+  });
+  // その他のトレーニング
+  otherRows.forEach(function(r){
+    if(r.val>0&&r.name.trim()){
+      var d=r.unit==='km'?Math.round(r.val*80):r.unit==='sec'?Math.round(r.val/30*40):r.unit==='min'?Math.round(r.val*2*40):Math.round(r.val/10*50);
+      var x=Math.round(d*0.2);
+      totalD+=d; totalX+=x; sets++;
+      addDmg(d,'sq',r.name.trim()+'（自由記録）',1);
+    }
+  });
+  otherRows=[];
+  if(totalD===0){showToast('記録を入力してください');return;}
+  pendingDmg=totalD; pendingXp=totalX;
+  document.getElementById('rsm-summary').textContent='合計ダメージ '+totalD+' · XP +'+totalX;
+  showRaidSelectModal();
+  rendRecord();
+}
+
+function showRaidSelectModal(){
+  var html='';
+  raids.forEach(function(r,i){
+    var pct=Math.round(r.hp/r.maxHp*100);
+    var locked=lv<r.minLv;
+    var hpClass=pct>50?'hp-high':pct>20?'hp-mid':'hp-low';
+    html+='<div class="raid-choice'+(locked?' locked':'')+'" onclick="sendToRaid('+i+')" id="rc-'+i+'">'+
+      '<div class="rc-top">'+
+        '<div class="rc-icon">'+r.icon+'</div>'+
+        '<div class="rc-name">'+r.name+'</div>'+
+        '<div class="rc-badges"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span></div>'+
+      '</div>'+
+      '<div class="rc-hp-row"><span class="rc-hp-pct">HP '+pct+'%</span><span class="rc-hp-num">'+r.hp.toLocaleString()+' / '+r.maxHp.toLocaleString()+'</span></div>'+
+      '<div class="hp-track" style="height:5px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
+      (locked?'<div class="rc-lock-msg">🔒 '+r.lockMsg+'</div>':'<div class="rc-reward">報酬：XP +'+r.rewardXp+' · '+r.rewardRare+'</div>')+
+    '</div>';
+  });
+  document.getElementById('raid-choices').innerHTML=html;
+  document.getElementById('raid-select-modal').classList.add('show');
+}
+
+function sendToRaid(i){
+  var r=raids[i];
+  if(lv<r.minLv)return;
+  var actual=Math.min(pendingDmg,raidLimit-myRaidDmg[i]);
+  raids[i].hp=Math.max(0,raids[i].hp-actual);
+  myRaidDmg[i]+=actual;
+  document.getElementById('raid-select-modal').classList.remove('show');
+  showToast(r.name+'に '+actual+'ダメージ！ 💥');
+  rendHome();
+  if(raids[i].hp<=0)setTimeout(function(){showToast('🎉 '+r.name+'を撃破！報酬ゲット！');},700);
+  pendingDmg=0;
+}
+
+// FRIENDS
+function setFriendFilter(f,el){
+  friendFilter=f;
+  document.querySelectorAll('.f-chip').forEach(function(c){c.classList.remove('on')});
+  el.classList.add('on');
+  rendFriends();
+}
+function rendFriends(){
+  var list=friends.filter(function(f){return friendFilter==='all'||f.goal===friendFilter;});
+  var html=list.map(function(f){
+    var isFollowing=following.indexOf(f.id)>=0;
+    return '<div class="friend-card">'+
+      '<div class="fr-av" style="background:var(--gl)">'+f.av+'</div>'+
+      '<div class="fr-info">'+
+        '<div class="fr-name">'+f.name+'</div>'+
+        '<div class="fr-tags"><span class="fr-tag">'+f.goalLbl+'</span><span class="fr-tag" style="background:var(--al);color:var(--am)">Lv.'+f.lv+'</span></div>'+
+        '<div class="fr-activity">'+f.activity+'</div>'+
+      '</div>'+
+      '<div class="fr-btns">'+
+        '<button class="fr-follow-btn'+(isFollowing?' following':'')+'" onclick="toggleFollow('+f.id+',this)">'+(isFollowing?'フォロー中':'フォロー')+'</button>'+
+        '<button class="fr-cheer-btn" onclick="cheerFriend(\''+f.name+'\')">応援 💪</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('friends-list').innerHTML=html||'<div style="text-align:center;padding:24px;font-size:14px;color:var(--t3)">該当する仲間がいません</div>';
+  var feedHtml=activityLog.map(function(a){
+    return '<div class="act-row">'+
+      '<div class="act-av" style="background:var(--al)">'+a.av+'</div>'+
+      '<div class="act-txt"><strong>'+a.name+'さん</strong>'+a.txt+'</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
+        '<div class="act-time">'+a.time+'</div>'+
+        '<button class="cheer-btn" onclick="cheerAction(\''+a.name+'\')">応援</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('friends-feed').innerHTML=feedHtml;
+}
+function toggleFollow(id,btn){
+  var idx=following.indexOf(id);
+  if(idx>=0){following.splice(idx,1);btn.textContent='フォロー';btn.classList.remove('following');}
+  else{following.push(id);btn.textContent='フォロー中';btn.classList.add('following');showToast('フォローしました！');}
+}
+function cheerFriend(name){showToast(name+'さんを応援しました💪');}
+function cheerAction(name){showToast(name+'さんを応援しました💪');}
+
+// RAIDS LIST
+function rendRaidsList(){
+  var html='';
+  raids.forEach(function(r,i){
+    var pct=Math.round(r.hp/r.maxHp*100);
+    var locked=lv<r.minLv;
+    var hpClass=pct>50?'hp-mid':'hp-low';
+    html+='<div class="card" style="margin-bottom:10px;padding:14px;cursor:'+(locked?'default':'pointer')+(locked?';opacity:.7':'')+'" onclick="'+(locked?'showToast(\''+r.lockMsg+'になると参加できます\')':'openRaid('+i+')')+'">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
+        '<div style="width:56px;height:56px;border-radius:var(--rs);background:'+r.bg+';display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">'+r.icon+'</div>'+
+        '<div style="flex:1">'+
+          '<div style="font-size:16px;font-weight:800;margin-bottom:4px">'+r.name+'</div>'+
+          '<div style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span>'+(locked?'<span class="badge" style="background:var(--rl);color:#A32D2D">🔒 '+r.lockMsg+'</span>':'<span class="badge" style="background:var(--gl);color:var(--g)">参加可能</span>')+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:700">'+r.parts+'人参加</div><div style="font-size:11px;color:var(--t3)">残り18時間</div></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;font-weight:700">HP '+pct+'%</span><span style="font-size:12px;color:var(--t3)">'+r.hp.toLocaleString()+' / '+r.maxHp.toLocaleString()+'</span></div>'+
+      '<div class="hp-track" style="height:6px;margin-bottom:10px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<div style="font-size:12px;color:var(--t2)">報酬：XP +'+r.rewardXp+' · '+r.rewardRare+'</div>'+
+        (locked?'<div style="font-size:12px;font-weight:700;color:var(--t3)">Lv'+r.minLv+'〜</div>':'<div style="font-size:12px;font-weight:700;color:var(--gm)">参加する →</div>')+
+      '</div>'+
+    '</div>';
+  });
+  document.getElementById('raids-list').innerHTML=html;
+}
+
+// RAID DETAIL
+function openRaid(i){
+  currentRaidIdx=i;
+  var r=raids[i];
+  var pct=Math.round(r.hp/r.maxHp*100);
+  var hpClass=pct>50?'hp-mid':'hp-low';
+  document.getElementById('rd-title').textContent=r.name;
+  document.getElementById('rd-badge').textContent=r.diffLbl;
+  document.getElementById('rd-badge').className='badge b-'+r.diff;
+  document.getElementById('rd-icon-bg').style.background=r.bg;
+  document.getElementById('rd-icon').textContent=r.icon;
+  document.getElementById('rd-name').textContent=r.name;
+  document.getElementById('rd-sub').textContent=r.diffLbl+'レイドボス · 24時間制';
+  document.getElementById('rd-hp-num').textContent=r.hp.toLocaleString()+' / '+r.maxHp.toLocaleString();
+  document.getElementById('rd-hp-bar').style.width=pct+'%';
+  document.getElementById('rd-hp-bar').className='hp-fill '+hpClass;
+  document.getElementById('rd-parts').textContent='👥 '+r.parts+'人参加中';
+  document.getElementById('rd-my-dmg').textContent=myRaidDmg[i];
+  document.getElementById('rd-limit-txt').textContent='上限まであと '+(raidLimit-myRaidDmg[i]);
+  document.getElementById('rd-limit-bar').style.width=Math.round(myRaidDmg[i]/raidLimit*100)+'%';
+  var partHtml=[
+    {av:'🦊',name:'mika',dmg:320,you:false},
+    {av:'🐯',name:'ryo',dmg:280,you:false},
+    {av:avatar,name:nick,dmg:myRaidDmg[i],you:true},
+    {av:'🐺',name:'sora',dmg:180,you:false}
+  ].sort(function(a,b){return b.dmg-a.dmg;}).map(function(p,idx){
+    return '<div class="part-row">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--t3);width:20px">'+(idx+1)+'</div>'+
+      '<div class="part-av" style="background:var(--gl)">'+p.av+'</div>'+
+      '<div class="part-name">'+p.name+'</div>'+
+      (p.you?'<div class="part-you">あなた</div>':'')+
+      '<div class="part-dmg">'+p.dmg+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('raid-parts-list').innerHTML=partHtml;
+  goTo('raid');
+}
+
+function doAtk(type,dmg,cd,label,btnId,cdId){
+  if(cds[btnId])return;
+  var i=currentRaidIdx;
+  if(myRaidDmg[i]>=raidLimit){showToast('このレイドの上限に達しました');return;}
+  var actual=Math.min(dmg,raidLimit-myRaidDmg[i]);
+  raids[i].hp=Math.max(0,raids[i].hp-actual);
+  myRaidDmg[i]+=actual;
+  addDmg(actual,type,label,1);
+  startCd(btnId,cdId,cd,false);
+  floatDmg(actual);
+  showToast(label+' ！ −'+actual+'ダメージ！');
+  document.getElementById('rd-my-dmg').textContent=myRaidDmg[i];
+  var rem=raidLimit-myRaidDmg[i];
+  document.getElementById('rd-limit-txt').textContent=rem>0?'上限まであと '+rem:'上限に達しました';
+  document.getElementById('rd-limit-bar').style.width=Math.round(myRaidDmg[i]/raidLimit*100)+'%';
+  var pct=Math.round(raids[i].hp/raids[i].maxHp*100);
+  document.getElementById('rd-hp-num').textContent=raids[i].hp.toLocaleString()+' / '+raids[i].maxHp.toLocaleString();
+  var bar=document.getElementById('rd-hp-bar');
+  bar.style.width=pct+'%';
+  bar.className='hp-fill '+(pct>50?'hp-mid':'hp-low');
+  if(raids[i].hp<=0)setTimeout(function(){showToast('🎉 撃破！全員にボーナスXP！');},700);
+}
+
+// MYPAGE
+function rendMypage(){
+  document.getElementById('prof-av').textContent=avatar;
+  document.getElementById('home-av').textContent=avatar;
+  document.getElementById('prof-name').textContent=nick;
+  document.getElementById('prof-goal').textContent='目標：'+goalLabel;
+  document.getElementById('prof-lv-b').textContent='Lv.'+lv;
+  document.getElementById('xp-lbl').textContent='Lv.'+lv+' → Lv.'+(lv+1);
+  var nx=lvThr[lv]||lvThr[lvThr.length-1];
+  var pv=lvThr[lv-1]||0;
+  document.getElementById('xp-val').textContent=exp+' / '+nx+' XP';
+  document.getElementById('xp-bar').style.width=Math.min(100,Math.round((exp-pv)/(nx-pv)*100))+'%';
+  document.getElementById('ps-dmg').textContent=totalDmg.toLocaleString();
+  document.getElementById('ps-streak').textContent=streak+'日';
+  document.getElementById('ps-sets').textContent=totalSets;
+  document.getElementById('ach-mid').textContent='Lv'+lv+'/3';
+  document.getElementById('ach-hard').textContent='Lv'+lv+'/5';
+  var unlockHtml=raids.map(function(r){
+    var ok=lv>=r.minLv;
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--bd)">'+
+      '<div style="font-size:20px">'+r.icon+'</div>'+
+      '<div style="flex:1"><div style="font-size:13px;font-weight:700">'+r.name+'</div><div style="font-size:11px;color:var(--t3)">'+r.diffLbl+' · Lv'+r.minLv+'〜</div></div>'+
+      '<div style="font-size:12px;font-weight:700;color:'+(ok?'var(--g)':'var(--t3)')+'">'+( ok?'✓ 参加可能':'🔒 未解放')+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('raid-unlock-status').innerHTML=unlockHtml;
+  var qrsHtml=qrSettings.map(function(q,i){
+    return '<div class="qr-setting">'+
+      '<div class="qrs-icon">'+q.icon+'</div>'+
+      '<div class="qrs-name">'+q.name+'</div>'+
+      '<div class="qrs-amount">'+q.amount+q.unit+'</div>'+
+      '<button class="qrs-edit" onclick="editQr('+i+')">変更</button>'+
+      '<button class="qrs-edit" onclick="removeQrSlot('+i+')" style="color:var(--rd)">削除</button>'+
+    '</div>';
+  }).join('');
+  qrsHtml+='<button onclick="addQrSlot()" style="width:100%;background:var(--gl);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--g);cursor:pointer;margin-top:4px">＋ 種目を追加</button>';
+  document.getElementById('qr-settings').innerHTML=qrsHtml;
+
+  // 自作種目一覧
+  var customHtml=customExercises.length===0
+    ? '<div style="font-size:12px;color:var(--t3);padding:10px 0">まだ自作種目がありません</div>'
+    : customExercises.map(function(c,i){
+        return '<div class="qr-setting">'+
+          '<div class="qrs-icon">✏️</div>'+
+          '<div class="qrs-name">'+c.name+'</div>'+
+          '<div class="qrs-amount">'+c.defaultVal+c.unit+'</div>'+
+          '<button class="qrs-edit" onclick="removeCustomEx('+i+')" style="color:var(--rd)">削除</button>'+
+        '</div>';
+      }).join('');
+  customHtml+='<button onclick="document.getElementById(\'custom-ex-modal\').classList.add(\'show\')" style="width:100%;background:var(--bll);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--bl);cursor:pointer;margin-top:4px">✏️ 自作種目を作る</button>';
+  document.getElementById('custom-ex-list').innerHTML=customHtml;
+}
+function editQr(i){
+  var q=qrSettings[i];
+  var v=prompt(q.name+'の量を入力（'+q.unit+'）',q.amount);
+  if(v&&parseInt(v)>0){qrSettings[i].amount=parseInt(v);rendMypage();rendHome();showToast('クイック記録を更新しました');}
+}
+function addQrSlot(){
+  // 標準種目 + カスタム種目を合わせて選択肢を出す
+  var stdOptions=exercises.map(function(e){return {id:e.id,icon:e.icon,name:e.name,unit:e.unit,amount:e.per||10,custom:false};});
+  var customOptions=customExercises.filter(function(c){
+    return !qrSettings.find(function(q){return q.id===c.id;});
+  }).map(function(c){return {id:c.id,icon:'✏️',name:c.name,unit:c.unit,amount:c.defaultVal,custom:true};});
+  var all=stdOptions.concat(customOptions).filter(function(o){
+    return !qrSettings.find(function(q){return q.id===o.id;});
+  });
+  if(all.length===0){showToast('追加できる種目がありません');return;}
+  showAddQrModal(all);
+}
+function showAddQrModal(options){
+  var html='<div style="display:flex;flex-direction:column;gap:8px">';
+  options.forEach(function(o,i){
+    html+='<div onclick="confirmAddQr('+i+')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg);border-radius:var(--rs);cursor:pointer;border:.5px solid var(--bd)">'+
+      '<div style="font-size:22px">'+o.icon+'</div>'+
+      '<div style="flex:1"><div style="font-size:14px;font-weight:700">'+o.name+'</div>'+
+      '<div style="font-size:12px;color:var(--t3)">'+o.amount+o.unit+'（タップで追加）</div></div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--g)">追加</div>'+
+    '</div>';
+  });
+  html+='</div>';
+  document.getElementById('add-qr-options').innerHTML=html;
+  window._addQrOptions=options;
+  document.getElementById('add-qr-modal').classList.add('show');
+}
+function confirmAddQr(i){
+  var o=window._addQrOptions[i];
+  qrSettings.push({id:o.id,icon:o.icon,name:o.name,amount:o.amount,unit:o.unit});
+  document.getElementById('add-qr-modal').classList.remove('show');
+  rendMypage();rendHome();
+  showToast(o.name+'をクイック記録に追加しました！');
+}
+function removeQrSlot(i){
+  if(qrSettings.length<=1){showToast('最低1つは必要です');return;}
+  qrSettings.splice(i,1);
+  rendMypage();rendHome();showToast('削除しました');
+}
+function saveCustomExercise(){
+  var nameEl=document.getElementById('custom-ex-name');
+  var valEl=document.getElementById('custom-ex-val');
+  var unitEl=document.getElementById('custom-ex-unit');
+  var name=nameEl.value.trim();
+  var val=parseInt(valEl.value)||0;
+  var unit=unitEl.value;
+  if(!name||val<=0){showToast('種目名と数値を入力してください');return;}
+  var id='custom_'+Date.now();
+  customExercises.push({id:id,name:name,unit:unit,defaultVal:val,dmgPer:unit==='km'?80:unit==='sec'?40:unit==='min'?80:50});
+  nameEl.value=''; valEl.value='';
+  document.getElementById('custom-ex-modal').classList.remove('show');
+  rendMypage();
+  showToast(name+'を自作種目に追加しました！');
+}
+
+// COMMON
+function addDmg(dmg,type,label,sets){
+  todayDmg+=dmg; todaySets+=(sets||1); todayXp+=calcXp(type,dmg);
+  totalDmg+=dmg; totalSets+=(sets||1); exp+=calcXp(type,dmg);
+  checkLv();
+  var now=new Date();
+  var hh=now.getHours().toString().padStart(2,'0');
+  var mm=now.getMinutes().toString().padStart(2,'0');
+  var exObj=exercises.find(function(e){return e.id===type;});
+  logs.unshift({icon:exObj?exObj.icon:'💪',name:label||type,dmg:dmg,xp:calcXp(type,dmg),time:hh+':'+mm});
+}
+function rendLogList(){
+  if(logs.length===0){document.getElementById('log-list').innerHTML='<div style="text-align:center;padding:24px 0;font-size:14px;color:var(--t3)">まだ記録がありません</div>';return;}
+  document.getElementById('log-list').innerHTML=logs.slice(0,10).map(function(l){
+    return '<div class="log-row"><div class="log-icon">'+l.icon+'</div><div style="flex:1"><div class="log-name">'+l.name+'</div><div class="log-time">'+l.time+' · '+l.dmg+'ダメ</div></div><div style="text-align:right"><div class="log-xp">+'+l.xp+' XP</div><div class="log-dmg">レイドに貢献</div></div></div>';
+  }).join('');
+}
+function checkLv(){
+  var nx=lvThr[lv];
+  if(nx&&exp>=nx){lv++;showToast('🎉 レベルアップ！ Lv.'+lv+'になった！');}
+}
+function startCd(btnId,cdId,sec,isQr){
+  cds[btnId]=true;
+  var btn=document.getElementById(btnId);
+  var cdEl=document.getElementById(cdId);
+  if(btn)btn.classList.add('cd');
+  var r=sec;
+  if(cdEl)cdEl.textContent=r+'秒';
+  var iv=setInterval(function(){
+    r--;
+    if(r<=0){clearInterval(iv);delete cds[btnId];if(btn)btn.classList.remove('cd');if(cdEl)cdEl.textContent='';}
+    else if(cdEl)cdEl.textContent=r+'秒';
+  },1000);
+}
+function floatDmg(dmg){
+  var el=document.createElement('div');
+  el.className='dmg-float';el.textContent='-'+dmg;
+  el.style.left=(Math.random()*60+20)+'%';el.style.top='40%';
+  document.getElementById('app').appendChild(el);
+  setTimeout(function(){el.remove();},1000);
+}
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2400);
+}
+
+// モーダル背景クリックで閉じる
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+// iOS Safari: touchstartを登録することでclickが発火するようになる
+document.getElementById('login-btn-1').addEventListener('touchstart',function(){},false);
+document.getElementById('login-btn-2').addEventListener('touchstart',function(){},false);
+
 </script>
 </body>
 </html>
