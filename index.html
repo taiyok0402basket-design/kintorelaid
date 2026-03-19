@@ -248,6 +248,23 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 <body>
 <div id="app">
 
+<!-- クイック記録確認オーバーレイ -->
+<div id="qr-confirm-overlay" onclick="if(event.target===this)confirmQr(false)" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end;justify-content:center">
+  <div style="background:#fff;border-radius:22px 22px 0 0;padding:24px 20px 44px;width:100%;max-width:430px">
+    <div style="width:40px;height:4px;border-radius:99px;background:rgba(0,0,0,.16);margin:0 auto 20px"></div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:6px">記録しますか？</div>
+    <div style="font-size:14px;color:#6b6b67;margin-bottom:20px">
+      <span id="qr-confirm-label" style="font-weight:700;color:#1a1a18"></span>
+      <span style="margin:0 6px">→</span>
+      <span id="qr-confirm-dmg" style="font-weight:800;color:#639922"></span>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div onclick="confirmQr(false)" style="flex:1;background:#F2F0EA;border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:#6b6b67;text-align:center;cursor:pointer">キャンセル</div>
+      <div onclick="confirmQr(true)" style="flex:2;background:#3B6D11;border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#fff;text-align:center;cursor:pointer">記録する 💪</div>
+    </div>
+  </div>
+</div>
+
 <!-- LOGIN -->
 <div class="scr" id="s-login">
   <div class="scroll">
@@ -766,12 +783,24 @@ function rendActivityFeed(){
 }
 
 // QUICK RECORD
+// クイック記録の確認
+var _pendingQr=null;
 function quickRec(type,dmg,cd,label,btnId,cdId){
   if(cds[btnId])return;
-  addDmg(dmg,type,label,1);
-  startCd(btnId,cdId,cd,true);
-  floatDmg(dmg);
-  showToast(label+' ！ +'+dmg+'ダメージ！');
+  _pendingQr={type:type,dmg:dmg,cd:cd,label:label,btnId:btnId,cdId:cdId};
+  document.getElementById('qr-confirm-label').textContent=label;
+  document.getElementById('qr-confirm-dmg').textContent='+'+dmg+' ダメージ';
+  document.getElementById('qr-confirm-overlay').style.display='flex';
+}
+function confirmQr(ok){
+  document.getElementById('qr-confirm-overlay').style.display='none';
+  if(!ok||!_pendingQr)return;
+  var q=_pendingQr;
+  _pendingQr=null;
+  addDmg(q.dmg,q.type,q.label,1);
+  startCd(q.btnId,q.cdId,q.cd,true);
+  floatDmg(q.dmg);
+  showToast(q.label+' ！ +'+q.dmg+'ダメージ！');
   rendHome();
 }
 
