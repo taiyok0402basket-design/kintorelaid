@@ -728,7 +728,7 @@ function goTo(s){
   prev=cur; cur=s;
   if(s==='mypage')rendMypage();
   if(s==='record')rendRecord();
-  if(s==='friends')rendFriends();
+  if(s==='friends'){initFriendsSync();rendFriends();}
   if(s==='raids')rendRaidsList();
   if(s==='home')rendHome();
 }
@@ -1015,49 +1015,145 @@ function sendToRaid(i){
 }
 
 // FRIENDS
+// FRIENDS - Firebaseリアルタイム版
+var realUsers = []; // Firestoreから取得したユーザー一覧
+var followingUids = []; // フォロー中のUID一覧
+var friendsUnsubscribe = null;
+
+function initFriendsSync(){
+  if(friendsUnsubscribe) return; // 既に監視中
+  // 全ユーザーをリアルタイム取得（自分以外）
+  friendsUnsubscribe = db.collection('users')
+    .orderBy('updated_at','desc')
+    .limit(50)
+    .onSnapshot(function(snapshot){
+      realUsers = [];
+      snapshot.forEach(function(doc){
+        if(doc.id === currentUid) return; // 自分は除外
+        var d = doc.data();
+        if(!d.nickname) return; // プロフィール未設定は除外
+        realUsers.push({
+          uid: doc.id,
+          av: d.avatar || '🐼',
+          name: d.nickname || 'FitUser',
+          goal: d.goal || 'diet',
+          goalLbl: d.goalLabel || 'ダイエット',
+          lv: d.level || 1,
+          bio: d.bio || '',
+          totalDmg: d.total_damage || 0,
+          streak: d.streak || 1
+        });
+      });
+      if(cur === 'friends') rendFriends();
+      if(cur === 'home') rendActivityFeed();
+    }, function(err){
+      // 権限エラー等の場合はダミーデータにフォールバック
+    });
+
+  // 自分のフォローリストを取得
+  if(currentUid){
+    db.collection('follows')
+      .where('follower_uid','==',currentUid)
+      .onSnapshot(function(snapshot){
+        followingUids = [];
+        snapshot.forEach(function(doc){
+          followingUids.push(doc.data().following_uid);
+        });
+        if(cur === 'friends') rendFriends();
+      });
+  }
+}
+
 function setFriendFilter(f,el){
   friendFilter=f;
   document.querySelectorAll('.f-chip').forEach(function(c){c.classList.remove('on')});
   el.classList.add('on');
   rendFriends();
 }
+
 function rendFriends(){
-  var list=friends.filter(function(f){return friendFilter==='all'||f.goal===friendFilter;});
-  var html=list.map(function(f){
-    var isFollowing=following.indexOf(f.id)>=0;
-    return '<div class="friend-card">'+
-      '<div class="fr-av" style="background:var(--gl)">'+f.av+'</div>'+
-      '<div class="fr-info">'+
-        '<div class="fr-name">'+f.name+'</div>'+
-        '<div class="fr-tags"><span class="fr-tag">'+f.goalLbl+'</span><span class="fr-tag" style="background:var(--al);color:var(--am)">Lv.'+f.lv+'</span></div>'+
-        '<div class="fr-activity">'+f.activity+'</div>'+
-      '</div>'+
-      '<div class="fr-btns">'+
-        '<button class="fr-follow-btn'+(isFollowing?' following':'')+'" onclick="toggleFollow('+f.id+',this)">'+(isFollowing?'フォロー中':'フォロー')+'</button>'+
-        '<button class="fr-cheer-btn" onclick="cheerFriend(\''+f.name+'\')">応援 💪</button>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-  document.getElementById('friends-list').innerHTML=html||'<div style="text-align:center;padding:24px;font-size:14px;color:var(--t3)">該当する仲間がいません</div>';
-  var feedHtml=activityLog.map(function(a){
+  var list = realUsers.length > 0 ? realUsers : friends.map(function(f){
+    return {uid:f.id,av:f.av,name:f.name,goal:f.goal,goalLbl:f.goalLbl,lv:f.lv,bio:'',totalDmg:0,streak:1};
+  });
+  list = list.filter(function(f){return friendFilter==='all'||f.goal===friendFilter;});
+
+  if(list.length === 0){
+    document.getElementById('friends-list').innerHTML='<div style="text-align:center;padding:32px 0;font-size:14px;color:var(--t3)">まだ仲間がいません<br><span style="font-size:12px">同じ目標の人が登録されると表示されます</span></div>';
+  } else {
+    document.getElementById('friends-list').innerHTML = list.map(function(f){
+      var isFollowing = followingUids.indexOf(f.uid) >= 0;
+      var actTxt = f.streak > 1 ? f.streak+'日連続記録中' : '総ダメージ '+f.totalDmg;
+      return '<div class="friend-card">'+
+        '<div class="fr-av" style="background:var(--gl)">'+f.av+'</div>'+
+        '<div class="fr-info">'+
+          '<div class="fr-name">'+f.name+'</div>'+
+          '<div class="fr-tags">'+
+            '<span class="fr-tag">'+f.goalLbl+'</span>'+
+            '<span class="fr-tag" style="background:var(--al);color:var(--am)">Lv.'+f.lv+'</span>'+
+          '</div>'+
+          (f.bio ? '<div class="fr-activity">'+f.bio+'</div>' : '<div class="fr-activity">'+actTxt+'</div>')+
+        '</div>'+
+        '<div class="fr-btns">'+
+          '<div class="fr-follow-btn'+(isFollowing?' following':'')+'" onclick="toggleFollow(\''+f.uid+'\',\''+f.name+'\',this)">'+(isFollowing?'フォロー中':'フォロー')+'</div>'+
+          '<div class="fr-cheer-btn" onclick="cheerFriend(\''+f.uid+'\',\''+f.name+'\')">応援 💪</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  // 活動フィード（リアルユーザーから生成）
+  var feedUsers = realUsers.length > 0 ? realUsers.slice(0,6) : friends;
+  var feedHtml = feedUsers.map(function(f){
+    var acts = ['が今日のミッションを達成','がレイドに参加','が筋トレを記録','が連続記録を更新'];
+    var txt = acts[Math.floor(Math.random()*acts.length)];
     return '<div class="act-row">'+
-      '<div class="act-av" style="background:var(--al)">'+a.av+'</div>'+
-      '<div class="act-txt"><strong>'+a.name+'さん</strong>'+a.txt+'</div>'+
+      '<div class="act-av" style="background:var(--gl)">'+f.av+'</div>'+
+      '<div class="act-txt"><strong>'+f.name+'さん</strong>'+txt+'</div>'+
       '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
-        '<div class="act-time">'+a.time+'</div>'+
-        '<button class="cheer-btn" onclick="cheerAction(\''+a.name+'\')">応援</button>'+
+        '<div class="act-time">さっき</div>'+
+        '<div class="cheer-btn" onclick="cheerFriend(\''+f.uid+'\',\''+f.name+'\')">応援</div>'+
       '</div>'+
     '</div>';
   }).join('');
-  document.getElementById('friends-feed').innerHTML=feedHtml;
+  document.getElementById('friends-feed').innerHTML = feedHtml ||
+    '<div style="text-align:center;padding:20px;font-size:13px;color:var(--t3)">まだ活動がありません</div>';
 }
-function toggleFollow(id,btn){
-  var idx=following.indexOf(id);
-  if(idx>=0){following.splice(idx,1);btn.textContent='フォロー';btn.classList.remove('following');}
-  else{following.push(id);btn.textContent='フォロー中';btn.classList.add('following');showToast('フォローしました！');}
+
+function toggleFollow(uid, name, btn){
+  if(!currentUid){ showToast('ログインが必要です'); return; }
+  var isFollowing = followingUids.indexOf(uid) >= 0;
+  if(isFollowing){
+    // フォロー解除
+    db.collection('follows')
+      .where('follower_uid','==',currentUid)
+      .where('following_uid','==',uid)
+      .get().then(function(snap){
+        snap.forEach(function(doc){ doc.ref.delete(); });
+      });
+    showToast(name+'さんのフォローを解除しました');
+  } else {
+    // フォロー
+    db.collection('follows').add({
+      follower_uid: currentUid,
+      following_uid: uid,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(name+'さんをフォローしました！');
+  }
 }
-function cheerFriend(name){showToast(name+'さんを応援しました💪');}
+
+function cheerFriend(uid, name){
+  if(!currentUid){ showToast(name+'さんを応援しました💪'); return; }
+  db.collection('cheers').add({
+    from_uid: currentUid,
+    from_name: nick,
+    to_uid: uid,
+    created_at: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(){});
+  showToast(name+'さんを応援しました💪');
+}
 function cheerAction(name){showToast(name+'さんを応援しました💪');}
+
 
 // RAIDS LIST
 function rendRaidsList(){
@@ -1495,6 +1591,7 @@ function goToHome(){
   cur = 'home';
   rendHome();
   initRaidSync();
+  initFriendsSync();
   showToast('ようこそ、' + nick + '！仲間と一緒に頑張ろう💪');
 }
 
