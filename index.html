@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>筋トレレイド</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #3B6D11;
+    --green-light: #EAF3DE;
+    --green-mid: #639922;
+    --green-dark: #27500A;
+    --green-border: #C0DD97;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --red: #E24B4A;
+    --red-light: #FCEBEB;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --purple: #534AB7;
+    --purple-light: #EEEDFE;
+    --bg: #F4F2EC;
+    --card: #FFFFFF;
+    --text: #1a1a18;
+    --text-2: #6b6b67;
+    --text-3: #9a9a95;
+    --border: rgba(0,0,0,0.10);
+    --border-2: rgba(0,0,0,0.18);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); font-family: 'Nunito', sans-serif; color: var(--text); }
+  body { display: flex; justify-content: center; }
+
+  /* App shell */
+  #app { width: 100%; max-width: 430px; min-height: 100vh; background: var(--bg); position: relative; overflow: hidden; }
+
+  /* Screens */
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); transition: transform 0.28s cubic-bezier(.4,0,.2,1), opacity 0.28s; }
+  .screen.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
+  .screen.slide-left { transform: translateX(-30%); opacity: 0; pointer-events: none; }
+
+  /* Top bar */
+  .topbar { background: var(--card); border-bottom: 0.5px solid var(--border); padding: 14px 16px 10px; flex-shrink: 0; }
+  .topbar-row { display: flex; align-items: center; justify-content: space-between; }
+  .topbar-title { font-size: 18px; font-weight: 700; color: var(--text); }
+  .back-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* Tab bar */
+  .tabbar { background: var(--card); border-top: 0.5px solid var(--border); display: flex; padding: 6px 0 20px; flex-shrink: 0; margin-top: auto; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 4px 0; }
+  .tab svg { width: 22px; height: 22px; }
+  .tab-label { font-size: 10px; font-weight: 600; color: var(--text-3); }
+  .tab.active .tab-label { color: var(--green); }
+
+  /* Scroll area */
+  .scroll { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+
+  /* Cards */
+  .card { background: var(--card); border-radius: var(--radius); border: 0.5px solid var(--border); box-shadow: var(--shadow); }
+
+  /* Badges */
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+  .badge-loc { background: var(--blue-light); color: var(--blue); }
+  .badge-any { background: var(--purple-light); color: var(--purple); }
+  .badge-easy { background: var(--green-light); color: var(--green); }
+  .badge-mid { background: var(--amber-light); color: var(--amber); }
+  .badge-hard { background: var(--red-light); color: #A32D2D; }
+  .badge-urgent { background: var(--red-light); color: #A32D2D; }
+
+  /* HP bar */
+  .hp-track { background: var(--bg); border-radius: 99px; height: 6px; overflow: hidden; }
+  .hp-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+  .hp-high { background: var(--green-mid); }
+  .hp-mid { background: var(--amber); }
+  .hp-low { background: var(--red); }
+
+  /* ===== LOGIN SCREEN ===== */
+  #screen-login { background: var(--card); }
+  .login-hero { padding: 60px 28px 32px; text-align: center; }
+  .login-logo { width: 88px; height: 88px; border-radius: 24px; background: var(--green-light); border: 1px solid var(--green-border); display: flex; align-items: center; justify-content: center; font-size: 44px; margin: 0 auto 20px; }
+  .login-title { font-size: 30px; font-weight: 800; color: var(--text); letter-spacing: -1px; margin-bottom: 8px; }
+  .login-sub { font-size: 14px; color: var(--text-2); line-height: 1.6; }
+  .login-features { display: flex; flex-direction: column; gap: 12px; padding: 0 28px 32px; }
+  .feat-row { display: flex; align-items: center; gap: 12px; }
+  .feat-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .feat-text { font-size: 14px; color: var(--text-2); }
+  .feat-text strong { color: var(--text); font-weight: 700; }
+  .login-divider { height: 0.5px; background: var(--border); margin: 0 28px; }
+  .login-btns { padding: 28px 28px 40px; }
+  .login-btn-title { font-size: 15px; font-weight: 700; color: var(--text); text-align: center; margin-bottom: 16px; }
+  .btn-google { width: 100%; background: var(--card); border: 1px solid var(--border-2); border-radius: var(--radius); padding: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); transition: background 0.15s; margin-bottom: 10px; }
+  .btn-google:hover { background: var(--bg); }
+  .btn-google svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .btn-guest { width: 100%; background: var(--bg); border: none; border-radius: var(--radius); padding: 13px; font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: background 0.15s; }
+  .btn-guest:hover { background: #eae8e2; }
+  .login-terms { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 18px; line-height: 1.6; }
+  .login-terms a { color: var(--blue); text-decoration: none; }
+
+  /* Profile modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .modal-bg.show { opacity: 1; pointer-events: all; }
+  .modal { background: var(--card); border-radius: 24px 24px 0 0; padding: 20px 20px 40px; width: 100%; max-width: 430px; transform: translateY(100%); transition: transform 0.3s cubic-bezier(.4,0,.2,1); }
+  .modal-bg.show .modal { transform: translateY(0); }
+  .modal-handle { width: 40px; height: 4px; border-radius: 99px; background: var(--border-2); margin: 0 auto 20px; }
+  .modal-title { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--text-2); margin-bottom: 22px; }
+  .input-label { font-size: 12px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; }
+  .input-wrap { margin-bottom: 18px; }
+  .text-input { width: 100%; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 15px; font-family: 'Nunito', sans-serif; font-weight: 600; color: var(--text); background: var(--card); outline: none; transition: border-color 0.15s; }
+  .text-input:focus { border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(99,153,34,0.12); }
+  .avatar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 22px; }
+  .av-opt { aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; border: 2.5px solid transparent; transition: border-color 0.15s, transform 0.15s; }
+  .av-opt:active { transform: scale(0.92); }
+  .av-opt.sel { border-color: var(--green-mid); }
+  .av-c1 { background: var(--green-light); }
+  .av-c2 { background: var(--blue-light); }
+  .av-c3 { background: var(--amber-light); }
+  .av-c4 { background: var(--purple-light); }
+  .av-c5 { background: var(--red-light); }
+  .btn-start { width: 100%; background: var(--green); border: none; border-radius: var(--radius); padding: 15px; font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 800; color: #fff; cursor: pointer; transition: background 0.15s; }
+  .btn-start:hover { background: var(--green-dark); }
+  .btn-start:disabled { background: var(--border-2); color: var(--text-3); cursor: not-allowed; }
+
+  /* ===== HOME SCREEN ===== */
+  .home-header { background: var(--card); border-bottom: 0.5px solid var(--border); padding: 16px 16px 14px; }
+  .home-toprow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .home-appname { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+  .home-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--green-border); cursor: pointer; }
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .stat-box { background: var(--bg); border-radius: var(--radius-sm); padding: 10px; text-align: center; }
+  .stat-val { font-size: 17px; font-weight: 800; color: var(--text); }
+  .stat-lbl { font-size: 10px; font-weight: 600; color: var(--text-3); margin-top: 1px; }
+  .daily-card { margin: 12px 14px 0; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .daily-txt { font-size: 14px; font-weight: 700; color: var(--text); }
+  .daily-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .daily-badge { background: var(--green-light); color: var(--green); font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 99px; }
+  .section-wrap { padding: 14px 14px 0; }
+  .section-label { font-size: 12px; font-weight: 700; color: var(--text-3); margin-bottom: 10px; letter-spacing: 0.4px; text-transform: uppercase; }
+  .raid-mini { display: flex; align-items: center; gap: 12px; padding: 13px 14px; margin-bottom: 10px; cursor: pointer; transition: transform 0.1s; }
+  .raid-mini:active { transform: scale(0.98); }
+  .monster-thumb { width: 50px; height: 50px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  .raid-mini-info { flex: 1; min-width: 0; }
+  .raid-mini-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .raid-mini-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; }
+  .raid-mini-hp { }
+  .raid-mini-time { font-size: 12px; font-weight: 600; color: var(--text-3); text-align: right; flex-shrink: 0; line-height: 1.5; }
+  .raid-mini-time.urgent { color: var(--red); font-weight: 800; }
+
+  /* ===== RAID LIST ===== */
+  .filter-tabs { display: flex; border-bottom: 0.5px solid var(--border); }
+  .ftab { flex: 1; text-align: center; padding: 11px 4px; font-size: 13px; font-weight: 600; color: var(--text-3); cursor: pointer; border-bottom: 2.5px solid transparent; transition: all 0.15s; }
+  .ftab.active { color: var(--green); border-bottom-color: var(--green); }
+  .sort-row { display: flex; gap: 6px; padding: 10px 14px; overflow-x: auto; background: var(--card); border-bottom: 0.5px solid var(--border); }
+  .sort-row::-webkit-scrollbar { display: none; }
+  .sort-chip { font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border-2); background: var(--card); color: var(--text-2); cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+  .sort-chip.active { background: var(--green-light); color: var(--green); border-color: var(--green-border); }
+  .raid-full { padding: 14px; margin-bottom: 10px; cursor: pointer; transition: transform 0.1s; }
+  .raid-full:active { transform: scale(0.98); }
+  .raid-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .raid-info { flex: 1; min-width: 0; }
+  .raid-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .raid-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+  .raid-time { font-size: 12px; font-weight: 600; color: var(--text-3); text-align: right; flex-shrink: 0; line-height: 1.5; }
+  .raid-time.urgent { color: var(--red); font-weight: 800; }
+  .raid-hp-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .raid-hp-pct { font-size: 12px; font-weight: 600; color: var(--text-2); }
+  .raid-hp-num { font-size: 12px; color: var(--text-3); }
+  .raid-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .raid-parts { display: flex; align-items: center; gap: 6px; }
+  .avs { display: flex; }
+  .av-sm { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--card); margin-left: -5px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .av-sm:first-child { margin-left: 0; }
+  .av-a { background: #C0DD97; color: #27500A; }
+  .av-b { background: #B5D4F4; color: #185FA5; }
+  .av-c { background: #F5C4B3; color: #993C1D; }
+  .av-d { background: #CECBF6; color: #3C3489; }
+  .parts-txt { font-size: 12px; font-weight: 600; color: var(--text-3); }
+  .reward-chip { font-size: 12px; font-weight: 700; color: var(--text-2); }
+  .section-lbl { font-size: 11px; font-weight: 700; color: var(--text-3); margin: 14px 0 8px; letter-spacing: 0.4px; }
+
+  /* ===== RAID DETAIL ===== */
+  .detail-header { background: var(--card); border-bottom: 0.5px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .detail-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .monster-section { background: var(--card); border-bottom: 0.5px solid var(--border); padding: 18px 16px 16px; }
+  .monster-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .monster-big { width: 70px; height: 70px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 38px; flex-shrink: 0; }
+  .monster-meta { flex: 1; }
+  .monster-name { font-size: 19px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+  .monster-sub { font-size: 13px; color: var(--text-2); margin-bottom: 8px; }
+  .time-row { display: flex; gap: 14px; }
+  .time-chip { font-size: 12px; font-weight: 600; color: var(--text-3); }
+  .hp-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .hp-label { font-size: 12px; font-weight: 700; color: var(--text-2); }
+  .hp-nums { font-size: 13px; font-weight: 700; color: var(--text); }
+  .parts-row { display: flex; align-items: center; gap: 7px; margin-top: 10px; }
+  .parts-count { font-size: 12px; font-weight: 600; color: var(--text-3); }
+  .my-contrib { margin: 12px 14px 0; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
+  .contrib-left { }
+  .contrib-lbl { font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .contrib-limit { font-size: 11px; font-weight: 600; color: var(--text-3); margin-top: 2px; }
+  .contrib-val { font-size: 22px; font-weight: 800; color: var(--text); }
+  .limit-track-wrap { margin: 6px 14px 0; }
+  .limit-track { background: var(--bg); border-radius: 99px; height: 4px; overflow: hidden; }
+  .limit-fill { height: 100%; border-radius: 99px; background: var(--purple); transition: width 0.4s; }
+  .action-section { padding: 14px 14px 0; }
+  .action-lbl { font-size: 12px; font-weight: 700; color: var(--text-3); margin-bottom: 10px; letter-spacing: 0.3px; }
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .action-btn { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 12px; cursor: pointer; text-align: center; transition: all 0.15s; position: relative; font-family: 'Nunito', sans-serif; }
+  .action-btn:active:not(.cd) { transform: scale(0.96); }
+  .action-btn:hover:not(.cd) { border-color: var(--green-border); background: var(--green-light); }
+  .action-btn.cd { opacity: 0.5; cursor: not-allowed; }
+  .action-icon { font-size: 26px; margin-bottom: 5px; }
+  .action-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .action-dmg { font-size: 12px; font-weight: 700; color: var(--green-mid); }
+  .action-cd-txt { font-size: 11px; font-weight: 600; color: var(--text-3); margin-top: 3px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: var(--green-dark); color: #EAF3DE; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700; padding: 9px 20px; border-radius: 99px; opacity: 0; pointer-events: none; white-space: nowrap; z-index: 200; transition: opacity 0.2s; }
+  .toast.show { opacity: 1; }
+
+  /* ===== MYPAGE ===== */
+  .profile-card { background: var(--card); border-bottom: 0.5px solid var(--border); padding: 20px 16px; }
+  .prof-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .prof-avatar-wrap { position: relative; }
+  .prof-avatar { width: 68px; height: 68px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 32px; border: 3px solid var(--green-border); }
+  .lv-badge { position: absolute; bottom: -4px; right: -4px; background: var(--green); color: #EAF3DE; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 99px; border: 2px solid var(--card); }
+  .prof-name { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+  .prof-since { font-size: 12px; color: var(--text-3); margin-bottom: 8px; }
+  .exp-hdr { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .exp-lbl { font-size: 11px; font-weight: 700; color: var(--text-3); }
+  .exp-val { font-size: 11px; font-weight: 700; color: var(--text-3); }
+  .exp-track { background: var(--bg); border-radius: 99px; height: 6px; overflow: hidden; }
+  .exp-fill { height: 100%; border-radius: 99px; background: var(--green-mid); }
+  .prof-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .prof-stat { background: var(--bg); border-radius: var(--radius-sm); padding: 10px; text-align: center; }
+  .prof-stat-val { font-size: 19px; font-weight: 800; color: var(--text); }
+  .prof-stat-lbl { font-size: 10px; font-weight: 600; color: var(--text-3); margin-top: 1px; }
+  .my-section { padding: 14px 14px 0; }
+  .my-section-lbl { font-size: 12px; font-weight: 700; color: var(--text-3); margin-bottom: 10px; letter-spacing: 0.4px; text-transform: uppercase; }
+  .equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .equip-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; align-items: center; gap: 10px; }
+  .equip-icon { width: 38px; height: 38px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .equip-name { font-size: 12px; font-weight: 700; color: var(--text); }
+  .equip-bonus { font-size: 11px; font-weight: 700; color: var(--green-mid); margin-top: 1px; }
+  .equip-empty { font-size: 12px; font-weight: 600; color: var(--text-3); }
+  .ach-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .ach-row { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .ach-ico { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .ach-ico.done { background: var(--green-light); }
+  .ach-ico.lock { background: var(--bg); opacity: 0.6; }
+  .ach-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .ach-desc { font-size: 11px; font-weight: 600; color: var(--text-3); margin-top: 1px; }
+  .ach-done { font-size: 11px; font-weight: 700; background: var(--green-light); color: var(--green); padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
+  .ach-lock { font-size: 11px; font-weight: 600; color: var(--text-3); flex-shrink: 0; }
+  .hist-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .hist-row { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .hist-ico { font-size: 24px; flex-shrink: 0; }
+  .hist-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .hist-date { font-size: 11px; font-weight: 600; color: var(--text-3); margin-top: 1px; }
+  .hist-dmg { font-size: 14px; font-weight: 800; color: var(--green-mid); flex-shrink: 0; }
+
+  @media (max-width: 430px) {
+    #app { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== LOGIN ===== -->
+  <div class="screen" id="screen-login">
+    <div class="login-hero">
+      <div class="login-logo">💪</div>
+      <div class="login-title">筋トレレイド</div>
+      <div class="login-sub">筋トレしてモンスターを倒そう<br>仲間と協力してレイドを制覇</div>
+    </div>
+    <div class="login-features">
+      <div class="feat-row">
+        <div class="feat-dot" style="background:var(--green-light)">🗺️</div>
+        <div class="feat-text"><strong>近くのレイドに参加</strong>して仲間と協力</div>
+      </div>
+      <div class="feat-row">
+        <div class="feat-dot" style="background:var(--amber-light)">⚔️</div>
+        <div class="feat-text"><strong>筋トレがそのまま攻撃</strong>になるゲーム</div>
+      </div>
+      <div class="feat-row">
+        <div class="feat-dot" style="background:var(--purple-light)">🏆</div>
+        <div class="feat-text"><strong>レベルアップ・装備</strong>で強くなる</div>
+      </div>
+    </div>
+    <div class="login-divider"></div>
+    <div class="login-btns">
+      <div class="login-btn-title">はじめる</div>
+      <button class="btn-google" onclick="openProfile()">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M19.6 10.23c0-.68-.06-1.36-.18-2H10v3.79h5.39a4.6 4.6 0 01-2 3.02v2.51h3.23c1.89-1.74 2.98-4.3 2.98-7.32z" fill="#4285F4"/><path d="M10 20c2.7 0 4.97-.9 6.62-2.44l-3.23-2.51c-.9.6-2.04.96-3.39.96-2.6 0-4.8-1.76-5.59-4.12H1.08v2.6A10 10 0 0010 20z" fill="#34A853"/><path d="M4.41 11.89A6 6 0 014.1 10c0-.65.11-1.28.31-1.89V5.51H1.08A10 10 0 000 10c0 1.61.39 3.13 1.08 4.49l3.33-2.6z" fill="#FBBC05"/><path d="M10 3.96c1.47 0 2.79.5 3.83 1.5l2.87-2.87C14.96.99 12.69 0 10 0A10 10 0 001.08 5.51l3.33 2.6C5.2 5.72 7.4 3.96 10 3.96z" fill="#EA4335"/></svg>
+        Googleでログイン
+      </button>
+      <button class="btn-guest" onclick="openProfile()">ゲストとして試す</button>
+      <div class="login-terms">ログインすることで<a href="#">利用規約</a>および<a href="#">プライバシーポリシー</a>に同意します</div>
+    </div>
+  </div>
+
+  <!-- ===== HOME ===== -->
+  <div class="screen hidden" id="screen-home">
+    <div class="home-header">
+      <div class="home-toprow">
+        <div class="home-appname">筋トレレイド</div>
+        <div class="home-avatar" id="home-avatar" onclick="goTo('mypage')">🐼</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-val">Lv.3</div><div class="stat-lbl">レベル</div></div>
+        <div class="stat-box"><div class="stat-val" id="stat-dmg">320</div><div class="stat-lbl">今日のダメージ</div></div>
+        <div class="stat-box"><div class="stat-val">4回</div><div class="stat-lbl">参加レイド</div></div>
+      </div>
+    </div>
+    <div class="scroll">
+      <div class="card daily-card" style="margin:12px 14px 0">
+        <div><div class="daily-txt">今日のミッション</div><div class="daily-sub">スクワット30回を達成しよう</div></div>
+        <div class="daily-badge">2/3</div>
+      </div>
+      <div class="section-wrap" style="margin-top:14px">
+        <div class="section-label">近くのレイド</div>
+        <div class="card raid-mini" onclick="goToRaid(0)">
+          <div class="monster-thumb" style="background:var(--green-light)">🐉</div>
+          <div class="raid-mini-info">
+            <div class="raid-mini-name">フォレストスライム</div>
+            <div class="raid-mini-badges"><span class="badge badge-loc">代々木公園</span><span class="badge badge-easy">初級</span></div>
+            <div class="raid-mini-hp hp-track"><div class="hp-fill hp-high" style="width:72%"></div></div>
+          </div>
+          <div class="raid-mini-time urgent">残り<br>22分</div>
+        </div>
+        <div class="card raid-mini" onclick="goToRaid(1)">
+          <div class="monster-thumb" style="background:var(--amber-light)">👹</div>
+          <div class="raid-mini-info">
+            <div class="raid-mini-name">アイアンゴブリン</div>
+            <div class="raid-mini-badges"><span class="badge badge-loc">渋谷駅前</span><span class="badge badge-mid">中級</span></div>
+            <div class="raid-mini-hp hp-track"><div class="hp-fill hp-mid" style="width:38%"></div></div>
+          </div>
+          <div class="raid-mini-time">残り<br>2時間</div>
+        </div>
+      </div>
+      <div class="section-wrap" style="margin-top:14px">
+        <div class="section-label">どこでも参加できるレイド</div>
+        <div class="card raid-mini" onclick="goToRaid(2)">
+          <div class="monster-thumb" style="background:var(--red-light)">🐺</div>
+          <div class="raid-mini-info">
+            <div class="raid-mini-name">シャドウウルフ</div>
+            <div class="raid-mini-badges"><span class="badge badge-any">全国</span><span class="badge badge-mid">中級</span></div>
+            <div class="raid-mini-hp hp-track"><div class="hp-fill hp-low" style="width:18%"></div></div>
+          </div>
+          <div class="raid-mini-time urgent">残り<br>18分</div>
+        </div>
+        <div class="card raid-mini" onclick="goToRaid(3)">
+          <div class="monster-thumb" style="background:var(--blue-light)">🪨</div>
+          <div class="raid-mini-info">
+            <div class="raid-mini-name">ストーンゴーレム</div>
+            <div class="raid-mini-badges"><span class="badge badge-any">全国</span><span class="badge badge-mid">中級</span></div>
+            <div class="raid-mini-hp hp-track"><div class="hp-fill hp-high" style="width:85%"></div></div>
+          </div>
+          <div class="raid-mini-time">残り<br>6時間</div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar" id="tabbar-home">
+      <div class="tab active" onclick="goTo('home')">
+        <svg viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="#3B6D11" stroke-width="1.5" fill="none"/></svg>
+        <div class="tab-label" style="color:var(--green)">ホーム</div>
+      </div>
+      <div class="tab" onclick="goTo('raids')">
+        <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="var(--text-3)" stroke-width="1.5"/><path d="M7 11h8M11 7v8" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="tab-label">レイド</div>
+      </div>
+      <div class="tab" onclick="goTo('mypage')">
+        <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3" stroke="var(--text-3)" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="tab-label">マイページ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RAID LIST ===== -->
+  <div class="screen hidden" id="screen-raids">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="topbar-title">レイド</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-3)" id="raid-count">6件</div>
+      </div>
+      <div class="filter-tabs" style="margin-top:10px">
+        <div class="ftab active" onclick="setFilter('all',this)">すべて</div>
+        <div class="ftab" onclick="setFilter('location',this)">近くのみ</div>
+        <div class="ftab" onclick="setFilter('remote',this)">どこでも</div>
+      </div>
+    </div>
+    <div class="sort-row">
+      <div class="sort-chip active" onclick="setSort('time',this)">残り時間順</div>
+      <div class="sort-chip" onclick="setSort('hp',this)">HP残量順</div>
+      <div class="sort-chip" onclick="setSort('parts',this)">参加人数順</div>
+    </div>
+    <div class="scroll" id="raid-list-wrap" style="padding:10px 14px 0"></div>
+    <div class="tabbar">
+      <div class="tab" onclick="goTo('home')">
+        <svg viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="var(--text-3)" stroke-width="1.5" fill="none"/></svg>
+        <div class="tab-label">ホーム</div>
+      </div>
+      <div class="tab active" onclick="goTo('raids')">
+        <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="#3B6D11" stroke-width="1.5"/><path d="M7 11h8M11 7v8" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="tab-label" style="color:var(--green)">レイド</div>
+      </div>
+      <div class="tab" onclick="goTo('mypage')">
+        <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3" stroke="var(--text-3)" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="tab-label">マイページ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RAID DETAIL ===== -->
+  <div class="screen hidden" id="screen-detail">
+    <div class="detail-header">
+      <button class="back-btn" onclick="goBack()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--text-2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="detail-title">レイド詳細</div>
+      <div class="badge badge-any" style="margin-left:auto" id="detail-type-badge">全国</div>
+    </div>
+    <div class="scroll">
+      <div class="monster-section">
+        <div class="monster-row">
+          <div class="monster-big" id="detail-monster-bg"><span id="detail-monster-icon">👹</span></div>
+          <div class="monster-meta">
+            <div class="monster-name" id="detail-monster-name">アイアンゴブリン</div>
+            <div class="monster-sub" id="detail-monster-sub">中級モンスター</div>
+            <div class="time-row">
+              <div class="time-chip" id="detail-time">⏱ 残り 2時間14分</div>
+              <div class="time-chip" id="detail-parts">👥 8人参加中</div>
+            </div>
+          </div>
+        </div>
+        <div class="hp-header">
+          <div class="hp-label">HP</div>
+          <div class="hp-nums" id="detail-hp-nums">760 / 2000</div>
+        </div>
+        <div class="hp-track" style="height:8px">
+          <div class="hp-fill hp-mid" id="detail-hp-bar" style="width:38%"></div>
+        </div>
+        <div class="parts-row" style="margin-top:10px">
+          <div class="avs">
+            <div class="av-sm av-a"></div><div class="av-sm av-b"></div><div class="av-sm av-c"></div><div class="av-sm av-d"></div>
+          </div>
+          <div class="parts-count" id="detail-parts-txt">+4人がレイド中</div>
+        </div>
+      </div>
+      <div class="card my-contrib" style="margin:12px 14px 0">
+        <div>
+          <div class="contrib-lbl">このレイドの自分のダメージ</div>
+          <div class="contrib-limit" id="contrib-limit">上限まであと 320</div>
+        </div>
+        <div class="contrib-val" id="contrib-val">180</div>
+      </div>
+      <div class="limit-track-wrap">
+        <div class="limit-track"><div class="limit-fill" id="limit-bar" style="width:36%"></div></div>
+      </div>
+      <div class="action-section">
+        <div class="action-lbl">筋トレして攻撃する</div>
+        <div class="action-grid">
+          <button class="action-btn" id="btn-sq" onclick="doAction('sq',50,30,'スクワット','btn-sq','cd-sq')">
+            <div class="action-icon">🦵</div>
+            <div class="action-name">スクワット10回</div>
+            <div class="action-dmg">+50 ダメージ</div>
+            <div class="action-cd-txt" id="cd-sq"></div>
+          </button>
+          <button class="action-btn" id="btn-pu" onclick="doAction('pu',60,30,'腕立て','btn-pu','cd-pu')">
+            <div class="action-icon">💪</div>
+            <div class="action-name">腕立て10回</div>
+            <div class="action-dmg">+60 ダメージ</div>
+            <div class="action-cd-txt" id="cd-pu"></div>
+          </button>
+          <button class="action-btn" id="btn-pl" onclick="doAction('pl',40,35,'プランク','btn-pl','cd-pl')">
+            <div class="action-icon">🧘</div>
+            <div class="action-name">プランク30秒</div>
+            <div class="action-dmg">+40 ダメージ</div>
+            <div class="action-cd-txt" id="cd-pl"></div>
+          </button>
+          <button class="action-btn" id="btn-jp" onclick="doAction('jp',40,28,'ジャンプ','btn-jp','cd-jp')">
+            <div class="action-icon">⬆️</div>
+            <div class="action-name">ジャンプ20回</div>
+            <div class="action-dmg">+40 ダメージ</div>
+            <div class="action-cd-txt" id="cd-jp"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MYPAGE ===== -->
+  <div class="screen hidden" id="screen-mypage">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="topbar-title">マイページ</div>
+        <button style="font-size:13px;font-weight:700;color:var(--blue);background:none;border:none;cursor:pointer;padding:4px 0;font-family:'Nunito',sans-serif">編集</button>
+      </div>
+    </div>
+    <div class="scroll">
+      <div class="profile-card">
+        <div class="prof-row">
+          <div class="prof-avatar-wrap">
+            <div class="prof-avatar" id="prof-avatar">🐼</div>
+            <div class="lv-badge">Lv.3</div>
+          </div>
+          <div style="flex:1">
+            <div class="prof-name" id="prof-name">FitPanda</div>
+            <div class="prof-since">2025年3月から参加</div>
+            <div class="exp-hdr"><span class="exp-lbl">Lv.3 → Lv.4</span><span class="exp-val">340 / 450 XP</span></div>
+            <div class="exp-track"><div class="exp-fill" style="width:75%"></div></div>
+          </div>
+        </div>
+        <div class="prof-stats">
+          <div class="prof-stat"><div class="prof-stat-val">4,820</div><div class="prof-stat-lbl">総ダメージ</div></div>
+          <div class="prof-stat"><div class="prof-stat-val">12</div><div class="prof-stat-lbl">撃破数</div></div>
+          <div class="prof-stat"><div class="prof-stat-val">8日</div><div class="prof-stat-lbl">連続参加</div></div>
+        </div>
+      </div>
+      <div class="my-section">
+        <div class="my-section-lbl">装備中アイテム</div>
+        <div class="equip-grid">
+          <div class="equip-card"><div class="equip-icon" style="background:var(--green-light)">🥊</div><div><div class="equip-name">鋼のリストガード</div><div class="equip-bonus">腕トレ +10%</div></div></div>
+          <div class="equip-card"><div class="equip-icon" style="background:var(--amber-light)">👟</div><div><div class="equip-name">スクワットブーツ</div><div class="equip-bonus">脚トレ +15%</div></div></div>
+          <div class="equip-card"><div class="equip-icon" style="background:var(--bg)">＋</div><div><div class="equip-empty">未装備</div></div></div>
+          <div class="equip-card"><div class="equip-icon" style="background:var(--bg)">＋</div><div><div class="equip-empty">未装備</div></div></div>
+        </div>
+      </div>
+      <div class="my-section">
+        <div class="my-section-lbl">実績</div>
+        <div class="ach-list">
+          <div class="ach-row"><div class="ach-ico done">🏅</div><div style="flex:1"><div class="ach-name">初めての撃破</div><div class="ach-desc">初めてレイドを撃破した</div></div><div class="ach-done">達成</div></div>
+          <div class="ach-row"><div class="ach-ico done">🔥</div><div style="flex:1"><div class="ach-name">7日連続参加</div><div class="ach-desc">7日間連続でレイドに参加</div></div><div class="ach-done">達成</div></div>
+          <div class="ach-row"><div class="ach-ico lock">⚔️</div><div style="flex:1"><div class="ach-name">上級討伐者</div><div class="ach-desc">上級モンスターを倒す</div></div><div class="ach-lock">未達成</div></div>
+          <div class="ach-row"><div class="ach-ico lock">💪</div><div style="flex:1"><div class="ach-name">筋トレマスター</div><div class="ach-desc">累計1万ダメージを達成</div></div><div class="ach-lock">4,820/10,000</div></div>
+        </div>
+      </div>
+      <div class="my-section">
+        <div class="my-section-lbl">最近の戦歴</div>
+        <div class="hist-list">
+          <div class="hist-row"><div class="hist-ico">👹</div><div style="flex:1"><div class="hist-name">アイアンゴブリン</div><div class="hist-date">今日 14:32 · 撃破に貢献</div></div><div class="hist-dmg">+320</div></div>
+          <div class="hist-row"><div class="hist-ico">🐉</div><div style="flex:1"><div class="hist-name">フォレストスライム</div><div class="hist-date">今日 11:15 · 撃破に貢献</div></div><div class="hist-dmg">+180</div></div>
+          <div class="hist-row"><div class="hist-ico">🐺</div><div style="flex:1"><div class="hist-name">シャドウウルフ</div><div class="hist-date">昨日 19:40 · 撃破に貢献</div></div><div class="hist-dmg">+500</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab" onclick="goTo('home')">
+        <svg viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="var(--text-3)" stroke-width="1.5" fill="none"/></svg>
+        <div class="tab-label">ホーム</div>
+      </div>
+      <div class="tab" onclick="goTo('raids')">
+        <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="var(--text-3)" stroke-width="1.5"/><path d="M7 11h8M11 7v8" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="tab-label">レイド</div>
+      </div>
+      <div class="tab active" onclick="goTo('mypage')">
+        <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3" stroke="#3B6D11" stroke-width="1.5"/><path d="M4 19c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="tab-label" style="color:var(--green)">マイページ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile modal -->
+  <div class="modal-bg" id="profile-modal" onclick="handleModalBg(event)">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">プロフィール設定</div>
+      <div class="modal-sub">ニックネームとアバターを選んでください</div>
+      <div class="input-wrap">
+        <div class="input-label">ニックネーム（2〜12文字）</div>
+        <input type="text" class="text-input" id="nick-input" placeholder="例：FitPanda" maxlength="12" oninput="checkNick()">
+      </div>
+      <div class="input-label" style="margin-bottom:10px">アバター</div>
+      <div class="avatar-grid">
+        <div class="av-opt av-c1 sel" onclick="selectAv(this,'🐼')">🐼</div>
+        <div class="av-opt av-c2" onclick="selectAv(this,'🦊')">🦊</div>
+        <div class="av-opt av-c3" onclick="selectAv(this,'🐯')">🐯</div>
+        <div class="av-opt av-c4" onclick="selectAv(this,'🐺')">🐺</div>
+        <div class="av-opt av-c5" onclick="selectAv(this,'🦁')">🦁</div>
+      </div>
+      <button class="btn-start" id="btn-start" onclick="startGame()" disabled>冒険をはじめる 💪</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ===== STATE =====
+let currentScreen = 'login';
+let prevScreen = 'home';
+let selectedAvatar = '🐼';
+let nickname = 'FitPanda';
+let raidFilter = 'all';
+let raidSort = 'time';
+let currentRaidIdx = 0;
+let raidHp = [360, 760, 162, 1700, 6200, 420];
+let myDmg = 180;
+const myLimit = 500;
+const cdState = {};
+
+const raids = [
+  { name:'フォレストスライム', icon:'🐉', bg:'var(--green-light)', type:'location', place:'代々木公園', diff:'easy', diffLbl:'初級', maxHp:500, min:22, parts:3, xp:80 },
+  { name:'アイアンゴブリン', icon:'👹', bg:'var(--amber-light)', type:'location', place:'渋谷駅前', diff:'mid', diffLbl:'中級', maxHp:2000, min:134, parts:8, xp:150 },
+  { name:'シャドウウルフ', icon:'🐺', bg:'var(--red-light)', type:'remote', place:'全国', diff:'mid', diffLbl:'中級', maxHp:900, min:18, parts:12, xp:130 },
+  { name:'ストーンゴーレム', icon:'🪨', bg:'var(--blue-light)', type:'remote', place:'全国', diff:'mid', diffLbl:'中級', maxHp:2000, min:360, parts:5, xp:160 },
+  { name:'フレイムドラゴン', icon:'🔥', bg:'var(--red-light)', type:'remote', place:'全国', diff:'hard', diffLbl:'上級', maxHp:8000, min:480, parts:24, xp:300 },
+  { name:'ダークウィッチ', icon:'🧙', bg:'var(--purple-light)', type:'location', place:'新宿中央公園', diff:'hard', diffLbl:'上級', maxHp:5000, min:55, parts:15, xp:280 },
+];
+
+// ===== NAVIGATION =====
+function goTo(screen) {
+  const cur = document.getElementById('screen-' + currentScreen);
+  const next = document.getElementById('screen-' + screen);
+  if (!next || currentScreen === screen) return;
+  prevScreen = currentScreen;
+  cur.classList.add('slide-left');
+  next.classList.remove('hidden');
+  next.classList.remove('slide-left');
+  setTimeout(() => cur.classList.add('hidden'), 280);
+  currentScreen = screen;
+  if (screen === 'raids') renderRaidList();
+}
+
+function goToRaid(idx) {
+  currentRaidIdx = idx;
+  myDmg = 180;
+  loadRaidDetail(idx);
+  prevScreen = currentScreen;
+  const cur = document.getElementById('screen-' + currentScreen);
+  const next = document.getElementById('screen-detail');
+  cur.classList.add('slide-left');
+  next.classList.remove('hidden');
+  next.classList.remove('slide-left');
+  setTimeout(() => cur.classList.add('hidden'), 280);
+  currentScreen = 'detail';
+}
+
+function goBack() {
+  const cur = document.getElementById('screen-detail');
+  const prev = document.getElementById('screen-' + prevScreen);
+  cur.classList.add('hidden');
+  prev.classList.remove('hidden');
+  prev.classList.remove('slide-left');
+  currentScreen = prevScreen;
+}
+
+// ===== LOGIN =====
+function openProfile() {
+  document.getElementById('profile-modal').classList.add('show');
+}
+function handleModalBg(e) {
+  if (e.target === document.getElementById('profile-modal'))
+    document.getElementById('profile-modal').classList.remove('show');
+}
+function selectAv(el, emoji) {
+  document.querySelectorAll('.av-opt').forEach(a => a.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedAvatar = emoji;
+}
+function checkNick() {
+  const v = document.getElementById('nick-input').value.trim();
+  document.getElementById('btn-start').disabled = v.length < 2;
+}
+function startGame() {
+  const v = document.getElementById('nick-input').value.trim();
+  if (v.length < 2) return;
+  nickname = v;
+  document.getElementById('profile-modal').classList.remove('show');
+  document.getElementById('home-avatar').textContent = selectedAvatar;
+  document.getElementById('prof-avatar').textContent = selectedAvatar;
+  document.getElementById('prof-name').textContent = nickname;
+  goTo('home');
+}
+
+// ===== RAID LIST =====
+function setFilter(f, el) {
+  raidFilter = f;
+  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderRaidList();
+}
+function setSort(s, el) {
+  raidSort = s;
+  document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderRaidList();
+}
+function timeStr(m) {
+  if (m < 60) return '残り ' + m + '分';
+  const h = Math.floor(m/60), mn = m%60;
+  return '残り ' + h + '時間' + (mn > 0 ? mn + '分' : '');
+}
+function hpClass(pct) { return pct > 50 ? 'hp-high' : pct > 20 ? 'hp-mid' : 'hp-low'; }
+function diffBadge(d) { return d === 'hard' ? 'badge-hard' : d === 'mid' ? 'badge-mid' : 'badge-easy'; }
+
+function renderRaidList() {
+  let list = raids.map((r,i) => ({...r, idx:i, hp:raidHp[i]}));
+  if (raidFilter === 'location') list = list.filter(r => r.type === 'location');
+  if (raidFilter === 'remote') list = list.filter(r => r.type === 'remote');
+  if (raidSort === 'time') list.sort((a,b) => a.min - b.min);
+  if (raidSort === 'hp') list.sort((a,b) => (a.hp/a.maxHp) - (b.hp/b.maxHp));
+  if (raidSort === 'parts') list.sort((a,b) => b.parts - a.parts);
+
+  document.getElementById('raid-count').textContent = list.length + '件';
+  const urgent = list.filter(r => r.min < 30);
+  const normal = list.filter(r => r.min >= 30);
+  let html = '';
+  if (urgent.length) { html += '<div class="section-lbl">⚠️ まもなく終了</div>'; urgent.forEach(r => html += raidCard(r)); }
+  if (normal.length) { if(urgent.length) html += '<div class="section-lbl">開催中</div>'; normal.forEach(r => html += raidCard(r)); }
+  if (!list.length) html = '<div style="text-align:center;padding:48px 24px;font-size:14px;color:var(--text-3)">該当するレイドがありません</div>';
+  document.getElementById('raid-list-wrap').innerHTML = html;
+}
+function raidCard(r) {
+  const pct = Math.round(r.hp/r.maxHp*100);
+  const isU = r.min < 30;
+  return `<div class="card raid-full" onclick="goToRaid(${r.idx})">
+    <div class="raid-top">
+      <div class="monster-thumb" style="background:${r.bg}">${r.icon}</div>
+      <div class="raid-info">
+        <div class="raid-name">${r.name}</div>
+        <div class="raid-badges">
+          <span class="badge ${r.type==='location'?'badge-loc':'badge-any'}">${r.type==='location'?r.place:'全国'}</span>
+          <span class="badge ${diffBadge(r.diff)}">${r.diffLbl}</span>
+          ${isU?'<span class="badge badge-urgent">まもなく終了</span>':''}
+        </div>
+      </div>
+      <div class="raid-time${isU?' urgent':''}">${timeStr(r.min)}</div>
+    </div>
+    <div class="raid-hp-row"><span class="raid-hp-pct">HP ${pct}%</span><span class="raid-hp-num">${r.hp.toLocaleString()} / ${r.maxHp.toLocaleString()}</span></div>
+    <div class="hp-track" style="height:5px"><div class="hp-fill ${hpClass(pct)}" style="width:${pct}%"></div></div>
+    <div class="raid-bottom">
+      <div class="raid-parts"><div class="avs"><div class="av-sm av-a"></div><div class="av-sm av-b"></div><div class="av-sm av-c"></div></div><span class="parts-txt">${r.parts}人参加中</span></div>
+      <div class="reward-chip">⭐ ${r.xp} XP</div>
+    </div>
+  </div>`;
+}
+
+// ===== RAID DETAIL =====
+function loadRaidDetail(idx) {
+  const r = raids[idx];
+  const hp = raidHp[idx];
+  const pct = Math.round(hp/r.maxHp*100);
+  document.getElementById('detail-type-badge').textContent = r.type === 'location' ? r.place : '全国';
+  document.getElementById('detail-type-badge').className = 'badge ' + (r.type === 'location' ? 'badge-loc' : 'badge-any');
+  document.getElementById('detail-monster-bg').style.background = r.bg;
+  document.getElementById('detail-monster-icon').textContent = r.icon;
+  document.getElementById('detail-monster-name').textContent = r.name;
+  document.getElementById('detail-monster-sub').textContent = r.diffLbl + 'モンスター';
+  document.getElementById('detail-time').textContent = '⏱ ' + timeStr(r.min);
+  document.getElementById('detail-parts').textContent = '👥 ' + r.parts + '人参加中';
+  document.getElementById('detail-parts-txt').textContent = '+' + (r.parts - 4) + '人がレイド中';
+  updateDetailHp(idx);
+  updateContrib();
+}
+function updateDetailHp(idx) {
+  const r = raids[idx];
+  const hp = raidHp[idx];
+  const pct = Math.round(hp/r.maxHp*100);
+  document.getElementById('detail-hp-nums').textContent = hp.toLocaleString() + ' / ' + r.maxHp.toLocaleString();
+  const bar = document.getElementById('detail-hp-bar');
+  bar.style.width = pct + '%';
+  bar.className = 'hp-fill ' + hpClass(pct);
+}
+function updateContrib() {
+  document.getElementById('contrib-val').textContent = myDmg;
+  const rem = myLimit - myDmg;
+  document.getElementById('contrib-limit').textContent = rem > 0 ? '上限まであと ' + rem : '上限に達しました';
+  document.getElementById('limit-bar').style.width = Math.round(myDmg/myLimit*100) + '%';
+}
+
+function doAction(type, dmg, cdSec, label, btnId, cdId) {
+  if (cdState[type]) return;
+  if (myDmg >= myLimit) { showToast('このレイドの上限に達しました'); return; }
+  const actual = Math.min(dmg, myLimit - myDmg);
+  raidHp[currentRaidIdx] = Math.max(0, raidHp[currentRaidIdx] - actual);
+  myDmg += actual;
+  updateDetailHp(currentRaidIdx);
+  updateContrib();
+  startCd(type, cdSec, btnId, cdId);
+  showToast(label + ' ！ −' + actual + 'ダメージ！');
+  if (raidHp[currentRaidIdx] <= 0) setTimeout(() => showToast('🎉 撃破！報酬を獲得しました！'), 700);
+}
+function startCd(type, sec, btnId, cdId) {
+  cdState[type] = true;
+  const btn = document.getElementById(btnId);
+  const cdEl = document.getElementById(cdId);
+  btn.classList.add('cd');
+  let r = sec;
+  cdEl.textContent = r + '秒待機中';
+  const iv = setInterval(() => {
+    r--;
+    if (r <= 0) { clearInterval(iv); delete cdState[type]; btn.classList.remove('cd'); cdEl.textContent = ''; }
+    else cdEl.textContent = r + '秒待機中';
+  }, 1000);
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
