@@ -753,6 +753,23 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
   </div>
 </div>
 
+<!-- CUSTOM SET MODAL -->
+<div class="modal-bg" id="custom-set-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-height:85vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title">セットを作る</div>
+    <div class="modal-sub">複数種目をまとめて1タップで記録できます</div>
+    <div class="inp-wrap">
+      <div class="inp-lbl">セット名</div>
+      <input type="text" class="tinp" id="set-name-input" placeholder="例：朝トレセット、脚の日">
+    </div>
+    <div class="inp-lbl" style="margin-bottom:8px">含める種目</div>
+    <div id="set-items-list" style="margin-bottom:12px"></div>
+    <div id="set-add-item-area"></div>
+    <button onclick="saveCustomSet()" style="width:100%;background:var(--g);border:none;border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#fff;cursor:pointer;margin-top:8px">セットを保存</button>
+  </div>
+</div>
+
 <!-- CUSTOM EXERCISE MODAL -->
 <div class="modal-bg" id="custom-ex-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
@@ -933,14 +950,30 @@ function rendQrGrid(){
   var html='';
   for(var i=0;i<slots&&i<qrSettings.length;i++){
     var q=qrSettings[i];
-    var cdId='qcd-'+q.id+i;
-    var btnId='qr-'+q.id+i;
-    var dmg=calcDmg(q.id,q.amount);
-    html+='<button class="qr-btn" id="'+btnId+'" onclick="quickRec(\''+q.id+'\','+dmg+',30,\''+q.name+' '+q.amount+q.unit+'\',\''+btnId+'\',\''+cdId+'\')">';
-    html+='<div class="qr-icon">'+q.icon+'</div>';
-    html+='<div class="qr-name">'+q.name+' '+q.amount+q.unit+'</div>';
-    html+='<div class="qr-dmg">+'+dmg+' ダメ</div>';
-    html+='<div class="qr-cd" id="'+cdId+'"></div></button>';
+    var cdId='qcd-'+i;
+    var btnId='qr-slot-'+i;
+    if(q.isSet){
+      // セットボタン
+      var totalDmg=0;
+      (q.items||[]).forEach(function(it){totalDmg+=calcDmg(it.id,it.amount);});
+      var subTxt=(q.items||[]).map(function(it){return it.name+' '+it.amount+(it.unit||'回');}).join(' · ');
+      html+='<button class="qr-btn" id="'+btnId+'" onclick="quickRecSet('+i+',\''+btnId+'\',\''+cdId+'\')" style="grid-column:span 2;display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px">';
+      html+='<div style="font-size:24px">'+q.icon+'</div>';
+      html+='<div style="flex:1;min-width:0">';
+      html+='<div style="font-size:13px;font-weight:800">'+q.name+'</div>';
+      html+='<div style="font-size:10px;color:var(--t2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+subTxt+'</div>';
+      html+='<div style="font-size:11px;font-weight:700;color:var(--gm);margin-top:2px">合計 +'+totalDmg+' ダメ</div>';
+      html+='<div class="qr-cd" id="'+cdId+'"></div>';
+      html+='</div></button>';
+    } else {
+      // 通常ボタン
+      var dmg=calcDmg(q.id,q.amount);
+      html+='<button class="qr-btn" id="'+btnId+'" onclick="quickRec(\''+q.id+'\','+dmg+',30,\''+q.name+' '+q.amount+(q.unit||'回')+'\',\''+btnId+'\',\''+cdId+'\')">';
+      html+='<div class="qr-icon">'+q.icon+'</div>';
+      html+='<div class="qr-name">'+q.name+' '+q.amount+(q.unit||'回')+'</div>';
+      html+='<div class="qr-dmg">+'+dmg+' ダメ</div>';
+      html+='<div class="qr-cd" id="'+cdId+'"></div></button>';
+    }
   }
   document.getElementById('qr-grid').innerHTML=html;
   // 再描画後にアクティブなCDの表示を復元
@@ -954,6 +987,120 @@ function rendQrGrid(){
       if(cdEl) cdEl.textContent='⏱ '+fmt(r)+'後';
     }
   });
+}
+
+// セットをまとめて記録
+function quickRecSet(slotIdx, btnId, cdId){
+  if(cds[btnId]) return;
+  var q=qrSettings[slotIdx];
+  if(!q||!q.isSet||!q.items) return;
+  var totalDmg=0;
+  var labels=[];
+  q.items.forEach(function(it){
+    var d=calcDmg(it.id,it.amount);
+    totalDmg+=d;
+    labels.push(it.name+' '+it.amount+(it.unit||'回'));
+  });
+  _pendingQr={isSet:true,slotIdx:slotIdx,totalDmg:totalDmg,labels:labels,btnId:btnId,cdId:cdId,cd:60,q:q};
+  document.getElementById('qr-confirm-label').textContent=q.name;
+  document.getElementById('qr-confirm-dmg').textContent='合計 +'+totalDmg+' ダメージ（'+labels.join('・')+'）';
+  document.getElementById('qr-confirm-overlay').style.display='flex';
+}
+
+// ===== セット作成 =====
+var _setItems=[]; // 編集中のセット種目リスト
+
+function openCreateSetModal(){
+  _setItems=[];
+  document.getElementById('set-name-input').value='';
+  rendSetItemsList();
+  rendSetAddItemArea();
+  document.getElementById('custom-set-modal').classList.add('show');
+}
+
+function rendSetItemsList(){
+  var el=document.getElementById('set-items-list');
+  if(!el) return;
+  if(_setItems.length===0){
+    el.innerHTML='<div style="font-size:13px;color:var(--t3);padding:8px 0 4px">まだ種目がありません。下から追加してください</div>';
+    return;
+  }
+  el.innerHTML=_setItems.map(function(it,i){
+    return '<div style="display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:var(--rs);padding:10px 12px;margin-bottom:8px">'+
+      '<div style="font-size:20px">'+it.icon+'</div>'+
+      '<div style="flex:1"><div style="font-size:13px;font-weight:700">'+it.name+'</div>'+
+        '<div style="font-size:11px;color:var(--gm);font-weight:700">+'+calcDmg(it.id,it.amount)+'ダメ</div></div>'+
+      '<div style="display:flex;align-items:center;gap:6px">'+
+        '<div onclick="changeSetItemAmount('+i+',-1)" style="width:26px;height:26px;border-radius:50%;background:var(--bg);border:.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;font-weight:700">−</div>'+
+        '<div style="font-size:13px;font-weight:800;min-width:36px;text-align:center">'+it.amount+it.unit+'</div>'+
+        '<div onclick="changeSetItemAmount('+i+',1)" style="width:26px;height:26px;border-radius:50%;background:var(--bg);border:.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;font-weight:700">＋</div>'+
+        '<div onclick="removeSetItem('+i+')" style="width:26px;height:26px;border-radius:50%;background:var(--rl);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer">✕</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function rendSetAddItemArea(){
+  var el=document.getElementById('set-add-item-area');
+  if(!el) return;
+  var allOptions=exercises.map(function(e){
+    return {id:e.id,icon:e.icon,name:e.name,unit:e.unit,amount:e.per||10};
+  }).concat(customExercises.map(function(c){
+    return {id:c.id,icon:'✏️',name:c.name,unit:c.unit,amount:c.defaultVal};
+  }));
+  var available=allOptions.filter(function(o){
+    return !_setItems.find(function(it){return it.id===o.id;});
+  });
+  if(available.length===0){el.innerHTML='';return;}
+  el.innerHTML='<div class="inp-lbl" style="margin-bottom:8px">種目を追加</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+    available.map(function(o,i){
+      return '<div onclick="addSetItem('+i+')" data-setopt="'+i+'" style="display:flex;align-items:center;gap:6px;background:var(--gl);border-radius:99px;padding:6px 12px;cursor:pointer">'+
+        '<div style="font-size:14px">'+o.icon+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:var(--g)">'+o.name+'</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+  window._setAddOptions=available;
+}
+
+function addSetItem(i){
+  var o=window._setAddOptions[i];
+  _setItems.push({id:o.id,icon:o.icon,name:o.name,unit:o.unit,amount:o.amount});
+  rendSetItemsList();
+  rendSetAddItemArea();
+}
+
+function removeSetItem(i){
+  _setItems.splice(i,1);
+  rendSetItemsList();
+  rendSetAddItemArea();
+}
+
+function changeSetItemAmount(i,dir){
+  var it=_setItems[i];
+  var step=it.unit==='秒'||it.unit==='sec'?10:it.unit==='km'?1:5;
+  it.amount=Math.max(step,it.amount+step*dir);
+  rendSetItemsList();
+}
+
+function saveCustomSet(){
+  var name=document.getElementById('set-name-input').value.trim();
+  if(!name){showToast('セット名を入力してください');return;}
+  if(_setItems.length<2){showToast('2種目以上選んでください');return;}
+  var setId='set_'+Date.now();
+  qrSettings.push({
+    id:setId,
+    isSet:true,
+    icon:'🏋️',
+    name:name,
+    items:_setItems.map(function(it){return {id:it.id,icon:it.icon,name:it.name,unit:it.unit,amount:it.amount};})
+  });
+  document.getElementById('custom-set-modal').classList.remove('show');
+  saveUserData();
+  rendMypage();
+  rendHome();
+  showToast('「'+name+'」を追加しました！');
 }
 
 function removeCustomEx(i){
@@ -1064,11 +1211,26 @@ function confirmQr(ok){
   if(!ok||!_pendingQr)return;
   var q=_pendingQr;
   _pendingQr=null;
-  addDmg(q.dmg,q.type,q.label,1);
-  floatDmg(q.dmg);
-  showToast(q.label+' +'+q.dmg+'ダメージ！');
-  rendHome(); // ← DOM再生成される
-  startCd(q.btnId,q.cdId,q.cd,true); // ← 再生成後のDOMに対してカウントダウン開始
+  if(q.isSet){
+    // セット記録
+    var totalDmg=0;
+    q.q.items.forEach(function(it){
+      var d=calcDmg(it.id,it.amount);
+      totalDmg+=d;
+      addDmg(d,it.id,it.name,1);
+    });
+    floatDmg(totalDmg);
+    showToast(q.q.name+' 完了！ +'+totalDmg+'ダメージ！');
+    rendHome();
+    startCd(q.btnId,q.cdId,q.cd,true);
+  } else {
+    // 通常記録
+    addDmg(q.dmg,q.type,q.label,1);
+    floatDmg(q.dmg);
+    showToast(q.label+' +'+q.dmg+'ダメージ！');
+    rendHome();
+    startCd(q.btnId,q.cdId,q.cd,true);
+  }
 }
 
 // RECORD SCREEN
@@ -2063,15 +2225,26 @@ function rendMypage(){
   }
   document.getElementById('equip-area').innerHTML=equipHtml;
   var qrsHtml=qrSettings.map(function(q,i){
+    if(q.isSet){
+      var subTxt=(q.items||[]).map(function(it){return it.name+' '+it.amount+(it.unit||'回');}).join(' · ');
+      return '<div class="qr-setting" style="flex-wrap:wrap;gap:4px">'+
+        '<div class="qrs-icon">'+q.icon+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div class="qrs-name">'+q.name+'</div>'+
+          '<div style="font-size:10px;color:var(--t2);margin-top:2px">'+subTxt+'</div>'+
+        '</div>'+
+        '<button class="qrs-edit" onclick="removeQrSlot('+i+')" style="color:var(--rd)">削除</button>'+
+      '</div>';
+    }
     return '<div class="qr-setting">'+
       '<div class="qrs-icon">'+q.icon+'</div>'+
       '<div class="qrs-name">'+q.name+'</div>'+
-      '<div class="qrs-amount">'+q.amount+q.unit+'</div>'+
+      '<div class="qrs-amount">'+q.amount+(q.unit||'回')+'</div>'+
       '<button class="qrs-edit" onclick="editQr('+i+')">変更</button>'+
       '<button class="qrs-edit" onclick="removeQrSlot('+i+')" style="color:var(--rd)">削除</button>'+
     '</div>';
   }).join('');
-  qrsHtml+='<button onclick="addQrSlot()" style="width:100%;background:var(--gl);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--g);cursor:pointer;margin-top:4px">＋ 種目を追加</button>';
+  qrsHtml+='<button onclick="addQrSlot()" style="width:100%;background:var(--gl);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--g);cursor:pointer;margin-top:4px">＋ 追加 / セットを作る</button>';
   document.getElementById('qr-settings').innerHTML=qrsHtml;
 
   // 自作種目一覧
@@ -2101,8 +2274,26 @@ function addQrSlot(){
   var all=stdOptions.concat(customOptions).filter(function(o){
     return !qrSettings.find(function(q){return q.id===o.id;});
   });
-  if(all.length===0){showToast('追加できる種目がありません');return;}
-  showAddQrModal(all);
+  var html='<div style="margin-bottom:12px">'+
+    '<div onclick="document.getElementById(\'add-qr-modal\').classList.remove(\'show\');openCreateSetModal();" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--al);border-radius:var(--rs);cursor:pointer;border:.5px solid var(--am);margin-bottom:10px">'+
+      '<div style="font-size:22px">🏋️</div>'+
+      '<div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--am)">セットを作る</div>'+
+      '<div style="font-size:12px;color:var(--t2)">複数種目をまとめて1タップで記録</div></div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--am)">作成 →</div>'+
+    '</div>'+
+    (all.length>0?'<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px">単体種目を追加</div>':'')+
+  '</div>';
+  html+=all.map(function(o,i){
+    return '<div onclick="confirmAddQr('+i+')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg);border-radius:var(--rs);cursor:pointer;border:.5px solid var(--bd);margin-bottom:8px">'+
+      '<div style="font-size:22px">'+o.icon+'</div>'+
+      '<div style="flex:1"><div style="font-size:14px;font-weight:700">'+o.name+'</div>'+
+      '<div style="font-size:12px;color:var(--t3)">'+o.amount+o.unit+'（タップで追加）</div></div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--g)">追加</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('add-qr-options').innerHTML=html;
+  window._addQrOptions=all;
+  document.getElementById('add-qr-modal').classList.add('show');
 }
 function showAddQrModal(options){
   var html='<div style="display:flex;flex-direction:column;gap:8px">';
