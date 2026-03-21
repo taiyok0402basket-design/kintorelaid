@@ -1388,8 +1388,8 @@ function addToDailyHistory(dmg,label,xp){
 }
 
 // Firestoreから過去30日分の履歴を取得
-function loadDailyHistory(){
-  if(!currentUid) return;
+function loadDailyHistory(callback){
+  if(!currentUid){ if(callback) callback(); return; }
   db.collection('users').doc(currentUid).collection('daily_logs')
     .orderBy(firebase.firestore.FieldPath.documentId(),'desc')
     .limit(30)
@@ -1401,11 +1401,22 @@ function loadDailyHistory(){
       var today=getDailyKey();
       if(logs.length>0){
         if(!dailyHistory[today]) dailyHistory[today]={dmg:todayDmg,sets:todaySets,logs:[]};
+        else { dailyHistory[today].dmg=Math.max(dailyHistory[today].dmg, todayDmg); }
       }
-    }).catch(function(){});
+      if(callback) callback();
+    }).catch(function(){ if(callback) callback(); });
 }
 
 function rendHistoryTab(){
+  // データがない場合はFirestoreから取得してから描画
+  if(Object.keys(dailyHistory).length === 0 && currentUid){
+    loadDailyHistory(function(){ _renderHistoryContent(); });
+  } else {
+    _renderHistoryContent();
+  }
+}
+
+function _renderHistoryContent(){
   // 累計統計
   var el=document.getElementById('stat-total-dmg');
   if(el) el.textContent=totalDmg.toLocaleString();
@@ -1503,9 +1514,17 @@ function rendHistoryTab(){
       histEl.innerHTML=html||'<div style="text-align:center;padding:24px;font-size:13px;color:var(--t3)">まだ記録がありません</div>';
     }
   }
-}
+} // end _renderHistoryContent
 
 function rendCalendarTab(){
+  if(Object.keys(dailyHistory).length === 0 && currentUid){
+    loadDailyHistory(function(){ _renderCalendarContent(); });
+  } else {
+    _renderCalendarContent();
+  }
+}
+
+function _renderCalendarContent(){
   var now=new Date();
   var d=document.getElementById('cal-title');
   if(d) d.textContent=calYear+'年'+(calMonth+1)+'月';
@@ -1540,7 +1559,7 @@ function rendCalendarTab(){
   if(monthCount) monthCount.textContent='今月'+recordedDays+'日記録';
   var calStreak=document.getElementById('cal-streak');
   if(calStreak) calStreak.textContent=streak+'日';
-}
+} // end _renderCalendarContent
 
 function changeCalMonth(dir){
   calMonth+=dir;
