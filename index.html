@@ -94,9 +94,14 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 .mis-sub{font-size:12px;color:var(--t2);margin-top:2px}
 .mis-badge{background:var(--gl);color:var(--g);font-size:13px;font-weight:800;padding:5px 12px;border-radius:99px}
 .qr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
-.qr-btn{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:13px 10px;cursor:pointer;text-align:center;font-family:'Nunito',sans-serif;transition:all .15s}
+.qr-btn{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:13px 10px;cursor:pointer;text-align:center;font-family:'Nunito',sans-serif;transition:background .15s,transform .15s;position:relative;user-select:none;-webkit-user-select:none}
 .qr-btn:active{transform:scale(.97)}
 .qr-btn.cd{opacity:.6;pointer-events:none;background:var(--bg)}
+.qr-btn.qr-dragging{opacity:.4;transform:scale(.95);border:1.5px dashed var(--gm)}
+.qr-btn.qr-drag-over{border:1.5px solid var(--g);background:var(--gl)}
+.qr-btn.qr-sort-mode{cursor:grab;border-color:var(--gm)}
+.qr-btn.qr-sort-mode::after{content:'⠿';position:absolute;top:4px;right:6px;font-size:12px;color:var(--t3)}
+.qr-sort-hint{font-size:11px;color:var(--am);font-weight:700;text-align:center;margin-bottom:6px;padding:4px 8px;background:var(--al);border-radius:99px;display:none}
 .qr-icon{font-size:22px;margin-bottom:4px}
 .qr-name{font-size:12px;font-weight:700;margin-bottom:2px}
 .qr-dmg{font-size:11px;font-weight:700;color:var(--gm)}
@@ -394,7 +399,11 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
       </div>
     </div>
     <div class="home-section" style="margin-top:4px">
-      <div class="sec-lbl">クイック記録</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="sec-lbl" style="margin-bottom:0">クイック記録</div>
+        <div id="qr-sort-toggle" onclick="toggleQrSortMode()" style="font-size:11px;font-weight:700;color:var(--t2);cursor:pointer;padding:3px 10px;border:.5px solid var(--bd2);border-radius:99px">並び替え</div>
+      </div>
+      <div class="qr-sort-hint" id="qr-sort-hint">長押しして移動 · 完了は右上ボタン</div>
       <div class="qr-grid" id="qr-grid"></div>
       <button onclick="goTo('record')" style="width:100%;background:var(--bg);border:.5px solid var(--bd2);border-radius:var(--rs);padding:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;margin-bottom:4px">📋 詳細記録を開く</button>
     </div>
@@ -948,6 +957,101 @@ function rendHome(){
   rendActivityFeed();
 }
 
+// ===== クイック記録 並び替え =====
+var qrSortMode = false;
+var dragSrcIdx = -1;
+
+function toggleQrSortMode(){
+  qrSortMode = !qrSortMode;
+  var btn = document.getElementById('qr-sort-toggle');
+  var hint = document.getElementById('qr-sort-hint');
+  if(btn) btn.textContent = qrSortMode ? '✓ 完了' : '並び替え';
+  if(btn) btn.style.color = qrSortMode ? 'var(--g)' : 'var(--t2)';
+  if(btn) btn.style.borderColor = qrSortMode ? 'var(--g)' : 'var(--bd2)';
+  if(hint) hint.style.display = qrSortMode ? 'block' : 'none';
+  rendQrGrid();
+  if(!qrSortMode) saveUserData();
+}
+
+function initQrDrag(){
+  var grid = document.getElementById('qr-grid');
+  if(!grid || !qrSortMode) return;
+  var btns = grid.querySelectorAll('.qr-btn');
+  btns.forEach(function(btn, idx){
+    // タッチ操作
+    var longPressTimer = null;
+    var touchStartY = 0;
+    btn.addEventListener('touchstart', function(e){
+      touchStartY = e.touches[0].clientY;
+      longPressTimer = setTimeout(function(){
+        dragSrcIdx = idx;
+        btn.classList.add('qr-dragging');
+        navigator.vibrate && navigator.vibrate(30);
+      }, 350);
+    }, {passive:true});
+    btn.addEventListener('touchmove', function(e){
+      if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}
+      if(dragSrcIdx < 0) return;
+      e.preventDefault();
+      var touch = e.touches[0];
+      var el = document.elementFromPoint(touch.clientX, touch.clientY);
+      var target = el && el.closest('.qr-btn');
+      grid.querySelectorAll('.qr-btn').forEach(function(b){b.classList.remove('qr-drag-over');});
+      if(target && target !== btn){
+        target.classList.add('qr-drag-over');
+      }
+    }, {passive:false});
+    btn.addEventListener('touchend', function(e){
+      if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}
+      if(dragSrcIdx < 0) return;
+      var touch = e.changedTouches[0];
+      var el = document.elementFromPoint(touch.clientX, touch.clientY);
+      var target = el && el.closest('.qr-btn');
+      var btnsArr = Array.from(grid.querySelectorAll('.qr-btn'));
+      if(target && target !== btn){
+        var destIdx = btnsArr.indexOf(target);
+        if(destIdx >= 0 && destIdx !== dragSrcIdx){
+          var moved = qrSettings.splice(dragSrcIdx, 1)[0];
+          qrSettings.splice(destIdx, 0, moved);
+          rendQrGrid();
+        }
+      }
+      grid.querySelectorAll('.qr-btn').forEach(function(b){
+        b.classList.remove('qr-dragging','qr-drag-over');
+      });
+      dragSrcIdx = -1;
+    });
+    // PC マウス操作
+    btn.setAttribute('draggable', 'true');
+    btn.addEventListener('dragstart', function(e){
+      dragSrcIdx = idx;
+      btn.classList.add('qr-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    btn.addEventListener('dragover', function(e){
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      grid.querySelectorAll('.qr-btn').forEach(function(b){b.classList.remove('qr-drag-over');});
+      btn.classList.add('qr-drag-over');
+    });
+    btn.addEventListener('dragleave', function(){
+      btn.classList.remove('qr-drag-over');
+    });
+    btn.addEventListener('drop', function(e){
+      e.preventDefault();
+      if(dragSrcIdx < 0 || dragSrcIdx === idx) return;
+      var moved = qrSettings.splice(dragSrcIdx, 1)[0];
+      qrSettings.splice(idx, 0, moved);
+      rendQrGrid();
+      dragSrcIdx = -1;
+    });
+    btn.addEventListener('dragend', function(){
+      btn.classList.remove('qr-dragging','qr-drag-over');
+      dragSrcIdx = -1;
+    });
+  });
+}
+
 function rendQrGrid(){
   var slots=qrSettings.length;
   var html='';
@@ -955,12 +1059,13 @@ function rendQrGrid(){
     var q=qrSettings[i];
     var cdId='qcd-'+i;
     var btnId='qr-slot-'+i;
+    var sortClass=qrSortMode?' qr-sort-mode':'';
+    var clickHandler=qrSortMode?'':'';
     if(q.isSet){
-      // セットボタン
       var totalDmg=0;
       (q.items||[]).forEach(function(it){totalDmg+=calcDmg(it.id,it.amount);});
       var subTxt=(q.items||[]).map(function(it){return it.name+' '+it.amount+(it.unit||'回');}).join(' · ');
-      html+='<button class="qr-btn" id="'+btnId+'" onclick="quickRecSet('+i+',\''+btnId+'\',\''+cdId+'\')" style="grid-column:span 2;display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px">';
+      html+='<button class="qr-btn'+sortClass+'" id="'+btnId+'"'+(qrSortMode?'':' onclick="quickRecSet('+i+',\''+btnId+'\',\''+cdId+'\')"')+' style="grid-column:span 2;display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px">';
       html+='<div style="font-size:24px">'+q.icon+'</div>';
       html+='<div style="flex:1;min-width:0">';
       html+='<div style="font-size:13px;font-weight:800">'+q.name+'</div>';
@@ -969,9 +1074,8 @@ function rendQrGrid(){
       html+='<div class="qr-cd" id="'+cdId+'"></div>';
       html+='</div></button>';
     } else {
-      // 通常ボタン
       var dmg=calcDmg(q.id,q.amount);
-      html+='<button class="qr-btn" id="'+btnId+'" onclick="quickRec(\''+q.id+'\','+dmg+',30,\''+q.name+' '+q.amount+(q.unit||'回')+'\',\''+btnId+'\',\''+cdId+'\')">';
+      html+='<button class="qr-btn'+sortClass+'" id="'+btnId+'"'+(qrSortMode?'':' onclick="quickRec(\''+q.id+'\','+dmg+',30,\''+q.name+' '+q.amount+(q.unit||'回')+'\',\''+btnId+'\',\''+cdId+'\')"')+'>';
       html+='<div class="qr-icon">'+q.icon+'</div>';
       html+='<div class="qr-name">'+q.name+' '+q.amount+(q.unit||'回')+'</div>';
       html+='<div class="qr-dmg">+'+dmg+' ダメ</div>';
@@ -979,17 +1083,21 @@ function rendQrGrid(){
     }
   }
   document.getElementById('qr-grid').innerHTML=html;
+  // 並び替えモード
+  if(qrSortMode) initQrDrag();
   // 再描画後にアクティブなCDの表示を復元
-  Object.keys(cds).forEach(function(btnId){
-    if(cds[btnId] && cds[btnId].cdId){
-      var btn=document.getElementById(btnId);
-      var cdEl=document.getElementById(cds[btnId].cdId);
-      var r=cds[btnId].remaining;
-      function fmt(s){return s>=60?Math.floor(s/60)+'分'+(s%60>0?(s%60)+'秒':''):s+'秒';}
-      if(btn) btn.classList.add('cd');
-      if(cdEl) cdEl.textContent='⏱ '+fmt(r)+'後';
-    }
-  });
+  if(!qrSortMode){
+    Object.keys(cds).forEach(function(btnId){
+      if(cds[btnId] && cds[btnId].cdId){
+        var btn=document.getElementById(btnId);
+        var cdEl=document.getElementById(cds[btnId].cdId);
+        var r=cds[btnId].remaining;
+        function fmt(s){return s>=60?Math.floor(s/60)+'分'+(s%60>0?(s%60)+'秒':''):s+'秒';}
+        if(btn) btn.classList.add('cd');
+        if(cdEl) cdEl.textContent='⏱ '+fmt(r)+'後';
+      }
+    });
+  }
 }
 
 // セットをまとめて記録
