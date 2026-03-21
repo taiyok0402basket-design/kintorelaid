@@ -774,8 +774,8 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 <div class="modal-bg" id="custom-ex-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">自作種目を作る</div>
-    <div class="modal-sub">オリジナルの種目をクイック記録に追加できます</div>
+    <div class="modal-title" id="custom-ex-modal-title">自作種目を作る</div>
+    <div class="modal-sub" id="custom-ex-modal-sub">オリジナルの種目をクイック記録に追加できます</div>
     <div class="inp-wrap">
       <div class="inp-lbl">種目名</div>
       <input type="text" class="tinp" id="custom-ex-name" placeholder="例：ベンチプレス、懸垂、ヨガ">
@@ -795,7 +795,7 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
         </select>
       </div>
     </div>
-    <button class="btn-p" onclick="saveCustomExercise()">作成してクイック記録に追加 ✓</button>
+    <button class="btn-p" id="custom-ex-save-btn" onclick="saveCustomExercise()">作成してクイック記録に追加 ✓</button>
   </div>
 </div>
 
@@ -2254,14 +2254,16 @@ function rendMypage(){
   var customHtml=customExercises.length===0
     ? '<div style="font-size:12px;color:var(--t3);padding:10px 0">まだ自作種目がありません</div>'
     : customExercises.map(function(c,i){
+        var unitLabel=c.unit==='sec'?'秒':c.unit==='km'?'km':c.unit==='min'?'分':'回';
         return '<div class="qr-setting">'+
           '<div class="qrs-icon">✏️</div>'+
           '<div class="qrs-name">'+c.name+'</div>'+
-          '<div class="qrs-amount">'+c.defaultVal+c.unit+'</div>'+
+          '<div class="qrs-amount">'+c.defaultVal+unitLabel+'</div>'+
+          '<button class="qrs-edit" onclick="editCustomEx('+i+')">編集</button>'+
           '<button class="qrs-edit" onclick="removeCustomEx('+i+')" style="color:var(--rd)">削除</button>'+
         '</div>';
       }).join('');
-  customHtml+='<button onclick="document.getElementById(\'custom-ex-modal\').classList.add(\'show\')" style="width:100%;background:var(--bll);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--bl);cursor:pointer;margin-top:4px">✏️ 自作種目を作る</button>';
+  customHtml+='<button onclick="openCreateCustomEx()" style="width:100%;background:var(--bll);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--bl);cursor:pointer;margin-top:4px">✏️ 自作種目を作る</button>';
   document.getElementById('custom-ex-list').innerHTML=customHtml;
 }
 function editQr(i){
@@ -2325,6 +2327,32 @@ function removeQrSlot(i){
   qrSettings.splice(i,1);
   rendMypage();rendHome();saveUserData();showToast('削除しました');
 }
+var _editingCustomExIdx = -1; // -1=新規, 0以上=編集中インデックス
+
+function openCreateCustomEx(){
+  _editingCustomExIdx = -1;
+  document.getElementById('custom-ex-name').value = '';
+  document.getElementById('custom-ex-val').value = '';
+  document.getElementById('custom-ex-unit').value = 'rep';
+  document.getElementById('custom-ex-modal-title').textContent = '自作種目を作る';
+  document.getElementById('custom-ex-modal-sub').textContent = 'オリジナルの種目をクイック記録に追加できます';
+  document.getElementById('custom-ex-save-btn').textContent = '作成してクイック記録に追加 ✓';
+  document.getElementById('custom-ex-modal').classList.add('show');
+}
+
+function editCustomEx(i){
+  var c = customExercises[i];
+  if(!c) return;
+  _editingCustomExIdx = i;
+  document.getElementById('custom-ex-name').value = c.name;
+  document.getElementById('custom-ex-val').value = c.defaultVal;
+  document.getElementById('custom-ex-unit').value = c.unit || 'rep';
+  document.getElementById('custom-ex-modal-title').textContent = '自作種目を編集';
+  document.getElementById('custom-ex-modal-sub').textContent = c.name + ' の内容を変更できます';
+  document.getElementById('custom-ex-save-btn').textContent = '変更を保存 ✓';
+  document.getElementById('custom-ex-modal').classList.add('show');
+}
+
 function saveCustomExercise(){
   var nameEl=document.getElementById('custom-ex-name');
   var valEl=document.getElementById('custom-ex-val');
@@ -2333,13 +2361,30 @@ function saveCustomExercise(){
   var val=parseInt(valEl.value)||0;
   var unit=unitEl.value;
   if(!name||val<=0){showToast('種目名と数値を入力してください');return;}
-  var id='custom_'+Date.now();
-  customExercises.push({id:id,name:name,unit:unit,defaultVal:val,dmgPer:unit==='km'?80:unit==='sec'?40:unit==='min'?80:50});
+  var dmgPer=unit==='km'?80:unit==='sec'?40:unit==='min'?80:50;
+  if(_editingCustomExIdx >= 0){
+    // 編集モード：既存を上書き
+    var existing = customExercises[_editingCustomExIdx];
+    existing.name = name;
+    existing.defaultVal = val;
+    existing.unit = unit;
+    existing.dmgPer = dmgPer;
+    // qrSettingsに同じIDがあれば名前・量・単位も更新
+    qrSettings.forEach(function(q){
+      if(q.id === existing.id){q.name=name; q.amount=val; q.unit=unit;}
+    });
+    showToast(name+'を更新しました！');
+  } else {
+    // 新規作成
+    var id='custom_'+Date.now();
+    customExercises.push({id:id,name:name,unit:unit,defaultVal:val,dmgPer:dmgPer});
+    showToast(name+'を自作種目に追加しました！');
+  }
   nameEl.value=''; valEl.value='';
   document.getElementById('custom-ex-modal').classList.remove('show');
   saveUserData();
   rendMypage();
-  showToast(name+'を自作種目に追加しました！');
+  rendHome();
 }
 
 // COMMON
