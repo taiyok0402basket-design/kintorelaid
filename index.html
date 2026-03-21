@@ -943,6 +943,17 @@ function rendQrGrid(){
     html+='<div class="qr-cd" id="'+cdId+'"></div></button>';
   }
   document.getElementById('qr-grid').innerHTML=html;
+  // 再描画後にアクティブなCDの表示を復元
+  Object.keys(cds).forEach(function(btnId){
+    if(cds[btnId] && cds[btnId].cdId){
+      var btn=document.getElementById(btnId);
+      var cdEl=document.getElementById(cds[btnId].cdId);
+      var r=cds[btnId].remaining;
+      function fmt(s){return s>=60?Math.floor(s/60)+'分'+(s%60>0?(s%60)+'秒':''):s+'秒';}
+      if(btn) btn.classList.add('cd');
+      if(cdEl) cdEl.textContent='⏱ '+fmt(r)+'後';
+    }
+  });
 }
 
 function removeCustomEx(i){
@@ -1042,7 +1053,7 @@ function rendActivityFeed(){
 // クイック記録の確認
 var _pendingQr=null;
 function quickRec(type,dmg,cd,label,btnId,cdId){
-  if(cds[btnId])return;
+  if(cds[btnId])return; // CDアクティブ中は無効
   _pendingQr={type:type,dmg:dmg,cd:cd,label:label,btnId:btnId,cdId:cdId};
   document.getElementById('qr-confirm-label').textContent=label;
   document.getElementById('qr-confirm-dmg').textContent='+'+dmg+' ダメージ';
@@ -2168,26 +2179,33 @@ function checkLv(){
   }
 }
 function startCd(btnId,cdId,sec,isQr){
-  cds[btnId]=true;
+  cds[btnId]={remaining:sec, cdId:cdId};
+  _runCdTick(btnId);
+}
+
+function _runCdTick(btnId){
+  if(!cds[btnId]) return;
+  var r=cds[btnId].remaining;
+  var cdId=cds[btnId].cdId;
+  // DOM要素を毎回取得（再レンダリング後も対応）
   var btn=document.getElementById(btnId);
   var cdEl=document.getElementById(cdId);
-  if(btn)btn.classList.add('cd');
-  var r=sec;
   function fmt(s){
-    if(s>=60) return Math.floor(s/60)+'分'+( s%60>0 ? (s%60)+'秒' : '');
+    if(s>=60) return Math.floor(s/60)+'分'+(s%60>0?(s%60)+'秒':'');
     return s+'秒';
   }
-  if(cdEl)cdEl.textContent='⏱ '+fmt(r)+'後';
-  var iv=setInterval(function(){
-    r--;
-    if(r<=0){
-      clearInterval(iv);
-      delete cds[btnId];
-      if(btn)btn.classList.remove('cd');
-      if(cdEl)cdEl.textContent='';
-    } else {
-      if(cdEl)cdEl.textContent='⏱ '+fmt(r)+'後';
-    }
+  if(btn) btn.classList.add('cd');
+  if(cdEl) cdEl.textContent='⏱ '+fmt(r)+'後';
+  if(r<=0){
+    delete cds[btnId];
+    if(btn) btn.classList.remove('cd');
+    if(cdEl) cdEl.textContent='';
+    return;
+  }
+  setTimeout(function(){
+    if(!cds[btnId]) return;
+    cds[btnId].remaining--;
+    _runCdTick(btnId);
   },1000);
 }
 function floatDmg(dmg){
