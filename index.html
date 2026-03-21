@@ -253,6 +253,15 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 <body>
 <div id="app">
 
+<!-- 日別詳細モーダル -->
+<div class="modal-bg" id="day-detail-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="day-detail-title">3月22日の記録</div>
+    <div id="day-detail-content"></div>
+  </div>
+</div>
+
 <!-- 記録確認オーバーレイ -->
 <div id="rec-confirm-overlay" onclick="if(event.target===this)closeRecordConfirm()" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end;justify-content:center">
   <div style="background:var(--ca);border-radius:22px 22px 0 0;padding:24px 20px 44px;width:100%;max-width:430px;max-height:80vh;overflow-y:auto">
@@ -1584,10 +1593,11 @@ function _renderCalendarContent(){
     if(hasRecord) recordedDays++;
     var bg=isToday?'var(--rd)':hasRecord?'var(--g)':'var(--bg)';
     var color=hasRecord||isToday?'#fff':'var(--t3)';
-    var dmgTxt=hasRecord&&!isToday?(dailyHistory[key]?dailyHistory[key].dmg:todayDmg):'';
-    cells+='<div style="aspect-ratio:1;border-radius:50%;background:'+bg+';display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:default">'+
+    var dmgTxt=hasRecord?(isToday?todayDmg:(dailyHistory[key]?dailyHistory[key].dmg:0)):'';
+    var clickHandler=hasRecord?'onclick="showDayDetail(\''+key+'\','+day+')"':'';
+    cells+='<div '+clickHandler+' style="aspect-ratio:1;border-radius:50%;background:'+bg+';display:flex;align-items:center;justify-content:center;flex-direction:column;'+(hasRecord?'cursor:pointer':'cursor:default')+';'+(hasRecord?'box-shadow:0 2px 6px rgba(0,0,0,.15)':'')+'">' +
       '<div style="font-size:12px;font-weight:800;color:'+color+'">'+day+'</div>'+
-      (dmgTxt?'<div style="font-size:7px;color:'+color+';opacity:.8">'+dmgTxt+'</div>':'')+
+      (dmgTxt?'<div style="font-size:7px;color:'+color+';opacity:.9;font-weight:700">'+dmgTxt+'</div>':'')+
     '</div>';
   }
   calEl.innerHTML=cells;
@@ -1604,6 +1614,66 @@ function changeCalMonth(dir){
   if(calMonth<0){calMonth=11;calYear--;}
   if(calMonth>11){calMonth=0;calYear++;}
   rendCalendarTab();
+}
+
+function showDayDetail(key, day){
+  var parts=key.split('-');
+  var label=parts[1]+'月'+parts[2]+'日';
+  document.getElementById('day-detail-title').textContent=label+'の記録';
+
+  // 今日ならローカルlogsを使う
+  var now=new Date();
+  var isToday=(parseInt(parts[0])===now.getFullYear()&&parseInt(parts[1])===(now.getMonth()+1)&&parseInt(parts[2])===now.getDate());
+  var data=isToday?{dmg:todayDmg,sets:todaySets,logs:logs}:(dailyHistory[key]||null);
+
+  if(!data||data.dmg===0){
+    document.getElementById('day-detail-content').innerHTML='<div style="text-align:center;padding:20px;font-size:13px;color:var(--t3)">記録データがありません</div>';
+    document.getElementById('day-detail-modal').classList.add('show');
+    return;
+  }
+
+  var html='';
+  // サマリー
+  html+='<div style="display:flex;gap:10px;margin-bottom:16px">'+
+    '<div style="flex:1;background:var(--gl);border-radius:var(--rs);padding:12px;text-align:center">'+
+      '<div style="font-size:20px;font-weight:900;color:var(--gm)">'+data.dmg+'</div>'+
+      '<div style="font-size:11px;color:var(--t3);font-weight:700">ダメージ</div>'+
+    '</div>'+
+    '<div style="flex:1;background:var(--al);border-radius:var(--rs);padding:12px;text-align:center">'+
+      '<div style="font-size:20px;font-weight:900;color:var(--am)">'+data.sets+'</div>'+
+      '<div style="font-size:11px;color:var(--t3);font-weight:700">セット数</div>'+
+    '</div>'+
+  '</div>';
+
+  // 種目別ログ
+  if(data.logs&&data.logs.length>0){
+    // logsオブジェクトの形式に応じて対応
+    html+='<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:8px">種目ログ</div>';
+    data.logs.forEach(function(l){
+      var name=l.label||l.name||'筋トレ';
+      var dmg=l.dmg||0;
+      var xp=l.xp||0;
+      var time=l.time||'';
+      var icon=l.icon||'💪';
+      html+='<div class="log-row">'+
+        '<div class="log-icon">'+icon+'</div>'+
+        '<div style="flex:1">'+
+          '<div class="log-name">'+name+'</div>'+
+          (time?'<div class="log-time">'+time+'</div>':'')+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div class="log-xp">+'+xp+' XP</div>'+
+          '<div class="log-dmg">'+dmg+'ダメ</div>'+
+        '</div>'+
+      '</div>';
+    });
+  } else {
+    // logsがない場合はdmgだけ表示
+    html+='<div style="font-size:13px;color:var(--t2);padding:8px 0">合計 '+data.dmg+'ダメージを与えました 💪</div>';
+  }
+
+  document.getElementById('day-detail-content').innerHTML=html;
+  document.getElementById('day-detail-modal').classList.add('show');
 }
 
 function rendRecord(){
