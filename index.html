@@ -685,9 +685,9 @@ var exercises=[
 ];
 
 var raids=[
-  {id:0,icon:'🐉',bg:'#EAF3DE',name:'フォレストスライム',diff:'easy',diffLbl:'初級',minLv:1,maxHp:5000,hp:3600,parts:8,rewardXp:30,rewardRare:'コモン装備',lockMsg:''},
-  {id:1,icon:'👹',bg:'#FAEEDA',name:'アイアンゴブリン',diff:'mid',diffLbl:'中級',minLv:3,maxHp:12000,hp:6800,parts:16,rewardXp:50,rewardRare:'アンコモン装備',lockMsg:'Lv3で解放'},
-  {id:2,icon:'🐉',bg:'#FCEBEB',name:'フレイムドラゴン',diff:'hard',diffLbl:'上級',minLv:5,maxHp:25000,hp:18000,parts:24,rewardXp:80,rewardRare:'レア装備',lockMsg:'Lv5で解放'}
+  {id:0,icon:'🐉',bg:'#EAF3DE',name:'フォレストスライム',diff:'easy',diffLbl:'初級',minLv:1,maxHp:2000,hp:2000,parts:0,rewardXp:30,rewardRare:'コモン装備',lockMsg:''},
+  {id:1,icon:'👹',bg:'#FAEEDA',name:'アイアンゴブリン',diff:'mid',diffLbl:'中級',minLv:3,maxHp:5000,hp:5000,parts:0,rewardXp:50,rewardRare:'アンコモン装備',lockMsg:'Lv3で解放'},
+  {id:2,icon:'🐉',bg:'#FCEBEB',name:'フレイムドラゴン',diff:'hard',diffLbl:'上級',minLv:5,maxHp:10000,hp:10000,parts:0,rewardXp:80,rewardRare:'レア装備',lockMsg:'Lv5で解放'}
 ];
 var myRaidDmg=[0,0,0];
 var raidLimit=500;
@@ -701,12 +701,8 @@ var friends=[
 ];
 var friendFilter='all';
 
-var activityLog=[
-  {av:'🦊',name:'mika',txt:'が今日のミッションを達成',time:'5分前',raidId:-1},
-  {av:'🐯',name:'ryo',txt:'が中級レイドに貢献 +180ダメ',time:'12分前',raidId:1},
-  {av:'🐺',name:'sora',txt:'が7日連続記録を達成！',time:'28分前',raidId:-1},
-  {av:'🦁',name:'ken',txt:'がフォレストスライムに参加',time:'45分前',raidId:0}
-];
+var activityLog=[]; // Firestoreからリアルタイム取得に切り替え
+var activityUnsubscribe=null;
 
 var otherRows=[];
 var customExercises=[];
@@ -827,23 +823,28 @@ function rendHomeRaids(){
         '<div class="rm-badges"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span>'+(locked?'<span class="badge" style="background:var(--rl);color:#A32D2D">'+r.lockMsg+'</span>':'')+'</div>'+
         '<div class="hp-track" style="height:5px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
       '</div>'+
-      '<div class="rm-time'+(r.hp/r.maxHp<0.2?' urgent':'')+'">HP '+pct+'%<br>'+r.parts+'人</div>'+
+      '<div class="rm-time'+(r.hp/r.maxHp<0.2?' urgent':'')+'">HP '+pct+'%<br>'+raidRemainingStr()+'</div>'+
     '</div>';
   });
   document.getElementById('home-raids').innerHTML=html;
 }
 
 function rendActivityFeed(){
-  var html=activityLog.map(function(a){
+  var el=document.getElementById('activity-feed');
+  if(!el) return;
+  if(activityLog.length===0){
+    el.innerHTML='<div style="text-align:center;padding:20px 0;font-size:13px;color:var(--t3)">まだ活動がありません<br>筋トレを記録すると表示されます</div>';
+    return;
+  }
+  el.innerHTML=activityLog.slice(0,8).map(function(a){
     return '<div class="act-row">'+
       '<div class="act-av" style="background:var(--gl)">'+a.av+'</div>'+
       '<div class="act-txt"><strong>'+a.name+'さん</strong>'+a.txt+'</div>'+
       '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
         '<div class="act-time">'+a.time+'</div>'+
-        (a.raidId>=0?'<button class="cheer-btn" onclick="cheerAction(\''+a.name+'\')">応援</button>':'')+'</div>'+
+        (a.uid && a.uid!==currentUid?'<div class="cheer-btn" onclick="cheerFriend(\''+a.uid+'\',\''+a.name+'\')">応援</div>':'')+'</div>'+
     '</div>';
   }).join('');
-  document.getElementById('activity-feed').innerHTML=html;
 }
 
 // QUICK RECORD
@@ -981,6 +982,7 @@ function saveRecord(){
 
 function showRaidSelectModal(){
   var html='';
+  var remStr=raidRemainingStr();
   raids.forEach(function(r,i){
     var pct=Math.round(r.hp/r.maxHp*100);
     var locked=lv<r.minLv;
@@ -989,7 +991,7 @@ function showRaidSelectModal(){
       '<div class="rc-top">'+
         '<div class="rc-icon">'+r.icon+'</div>'+
         '<div class="rc-name">'+r.name+'</div>'+
-        '<div class="rc-badges"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span></div>'+
+        '<div class="rc-badges"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span><span style="font-size:11px;color:var(--t3);font-weight:600">'+remStr+'</span></div>'+
       '</div>'+
       '<div class="rc-hp-row"><span class="rc-hp-pct">HP '+pct+'%</span><span class="rc-hp-num">'+r.hp.toLocaleString()+' / '+r.maxHp.toLocaleString()+'</span></div>'+
       '<div class="hp-track" style="height:5px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
@@ -1007,6 +1009,7 @@ function sendToRaid(i){
   myRaidDmg[i]+=actual;
   document.getElementById('raid-select-modal').classList.remove('show');
   showToast(r.name+'に '+actual+'ダメージ！ 💥');
+  writeActivityLog('raid', r.name+'に'+actual+'ダメージ！', r.id);
   // Firestoreを更新（onSnapshotで全員に反映）
   updateRaidHpInFirestore(i, actual);
   pendingDmg=0;
@@ -1169,7 +1172,7 @@ function rendRaidsList(){
           '<div style="font-size:16px;font-weight:800;margin-bottom:4px">'+r.name+'</div>'+
           '<div style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span>'+(locked?'<span class="badge" style="background:var(--rl);color:#A32D2D">🔒 '+r.lockMsg+'</span>':'<span class="badge" style="background:var(--gl);color:var(--g)">参加可能</span>')+'</div>'+
         '</div>'+
-        '<div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:700">'+r.parts+'人参加</div><div style="font-size:11px;color:var(--t3)">残り18時間</div></div>'+
+        '<div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:700">'+r.parts+'人参加</div><div style="font-size:11px;color:var(--t3)">'+raidRemainingStr()+'</div></div>'+
       '</div>'+
       '<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;font-weight:700">HP '+pct+'%</span><span style="font-size:12px;color:var(--t3)">'+r.hp.toLocaleString()+' / '+r.maxHp.toLocaleString()+'</span></div>'+
       '<div class="hp-track" style="height:6px;margin-bottom:10px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
@@ -1194,7 +1197,8 @@ function openRaid(i){
   document.getElementById('rd-icon-bg').style.background=r.bg;
   document.getElementById('rd-icon').textContent=r.icon;
   document.getElementById('rd-name').textContent=r.name;
-  document.getElementById('rd-sub').textContent=r.diffLbl+'レイドボス · 24時間制';
+  document.getElementById('rd-sub').textContent=r.diffLbl+'レイドボス · 5時間制';
+  document.getElementById('rd-time').textContent='⏱ '+raidRemainingStr();
   document.getElementById('rd-hp-num').textContent=r.hp.toLocaleString()+' / '+r.maxHp.toLocaleString();
   document.getElementById('rd-hp-bar').style.width=pct+'%';
   document.getElementById('rd-hp-bar').className='hp-fill '+hpClass;
@@ -1363,6 +1367,8 @@ function addDmg(dmg,type,label,sets){
   var exObj=exercises.find(function(e){return e.id===type;});
   logs.unshift({icon:exObj?exObj.icon:'💪',name:label||type,dmg:dmg,xp:calcXp(type,dmg),time:hh+':'+mm});
   saveUserData();
+  // 活動ログをFirestoreに書き込む
+  writeActivityLog('workout', label+'を記録（'+dmg+'ダメ）');
 }
 function rendLogList(){
   if(logs.length===0){document.getElementById('log-list').innerHTML='<div style="text-align:center;padding:24px 0;font-size:14px;color:var(--t3)">まだ記録がありません</div>';return;}
@@ -1372,7 +1378,11 @@ function rendLogList(){
 }
 function checkLv(){
   var nx=lvThr[lv];
-  if(nx&&exp>=nx){lv++;showToast('🎉 レベルアップ！ Lv.'+lv+'になった！');}
+  if(nx&&exp>=nx){
+    lv++;
+    showToast('🎉 レベルアップ！ Lv.'+lv+'になった！');
+    writeActivityLog('levelup', 'Lv.'+lv+'にレベルアップ！');
+  }
 }
 function startCd(btnId,cdId,sec,isQr){
   cds[btnId]=true;
@@ -1453,6 +1463,56 @@ function saveProfEdit(){
   saveUserData();
   showToast('プロフィールを更新しました！');
 }
+// 活動ログをFirestoreに書き込む
+function writeActivityLog(type, text, raidId){
+  if(!currentUid || typeof db === 'undefined') return;
+  db.collection('activity_logs').add({
+    user_id: currentUid,
+    user_name: nick,
+    user_avatar: avatar,
+    type: type,
+    text: text,
+    raid_id: raidId || null,
+    created_at: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(){});
+}
+
+// 活動ログをリアルタイム取得
+function initActivitySync(){
+  if(activityUnsubscribe) return;
+  activityUnsubscribe = db.collection('activity_logs')
+    .orderBy('created_at','desc')
+    .limit(30)
+    .onSnapshot(function(snapshot){
+      activityLog = [];
+      snapshot.forEach(function(doc){
+        var d = doc.data();
+        activityLog.push({
+          av: d.user_avatar || '💪',
+          name: d.user_name || 'ユーザー',
+          txt: 'が'+d.text,
+          time: formatTime(d.created_at),
+          raidId: d.raid_id || -1,
+          uid: d.user_id
+        });
+      });
+      if(cur==='home') rendActivityFeed();
+      if(cur==='friends') rendFriends();
+    }, function(){});
+}
+
+// タイムスタンプを「○分前」に変換
+function formatTime(ts){
+  if(!ts) return 'さっき';
+  var now = new Date();
+  var t = ts.toDate ? ts.toDate() : new Date(ts);
+  var diff = Math.floor((now - t) / 60000);
+  if(diff < 1) return 'たった今';
+  if(diff < 60) return diff+'分前';
+  if(diff < 1440) return Math.floor(diff/60)+'時間前';
+  return Math.floor(diff/1440)+'日前';
+}
+
 function doDeleteData(){
   if(!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')){return;}
   // Firestoreのデータ削除
@@ -1465,6 +1525,10 @@ function doDeleteData(){
     totalDmg=0; totalSets=0; nick='FitPanda'; avatar='🐼';
     userGoal='diet'; goalLabel='ダイエット';
     logs=[]; myRaidDmg=[0,0,0]; currentUid=null;
+    if(activityUnsubscribe){activityUnsubscribe(); activityUnsubscribe=null;}
+    if(friendsUnsubscribe){friendsUnsubscribe(); friendsUnsubscribe=null;}
+    if(raidUnsubscribe){raidUnsubscribe(); raidUnsubscribe=null;}
+    activityLog=[];
     // Firebaseもサインアウト
     var so = (typeof auth!=='undefined') ? auth.signOut() : Promise.resolve();
     return so;
@@ -1592,6 +1656,7 @@ function goToHome(){
   rendHome();
   initRaidSync();
   initFriendsSync();
+  initActivitySync();
   showToast('ようこそ、' + nick + '！仲間と一緒に頑張ろう💪');
 }
 
@@ -1612,10 +1677,30 @@ auth.onAuthStateChanged(function(user){
   }
 });
 
-// 今日の日付キー
+// 5時間ごとのレイドキー
 function todayKey(){
   var d=new Date();
-  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+  var slot=Math.floor(d.getHours()/5); // 0-4時=0, 5-9時=1, 10-14時=2, 15-19時=3, 20-24時=4
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()+'-s'+slot;
+}
+
+// 現在スロットの残り時間（分）
+function raidRemainingMin(){
+  var d=new Date();
+  var currentSlotStart=(Math.floor(d.getHours()/5))*5;
+  var nextSlotDate=new Date(d);
+  nextSlotDate.setHours(currentSlotStart+5,0,0,0);
+  var diffMs=nextSlotDate-d;
+  return Math.max(0,Math.floor(diffMs/60000));
+}
+
+// 残り時間を表示用にフォーマット
+function raidRemainingStr(){
+  var min=raidRemainingMin();
+  var h=Math.floor(min/60);
+  var m=min%60;
+  if(h>0) return '残り '+h+'時間'+m+'分';
+  return '残り '+m+'分';
 }
 
 // レイドをFirestoreに初期化＆リアルタイム同期
