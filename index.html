@@ -402,9 +402,27 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
   </div>
   <div class="scroll">
     <div class="home-section">
-      <div class="card mission-card">
-        <div><div class="mis-title">今日のミッション</div><div class="mis-sub" id="mis-sub">筋トレを3セット記録しよう</div></div>
-        <div class="mis-badge" id="mis-badge">0/3</div>
+      <div class="card mission-card" style="flex-direction:column;align-items:stretch;gap:10px">
+        <!-- 今週の目標 -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div>
+              <div class="mis-title" id="week-goal-title">今週の目標</div>
+              <div class="mis-sub" id="week-goal-sub">週3回トレーニング</div>
+            </div>
+            <div id="week-goal-badge" style="font-size:16px;font-weight:900;color:var(--g);background:var(--gl);padding:4px 12px;border-radius:99px">0/3</div>
+          </div>
+          <!-- 週進捗バー（曜日ドット） -->
+          <div id="week-dots" style="display:flex;gap:5px;margin-bottom:4px"></div>
+          <div class="hp-track" style="height:5px"><div id="week-progress-bar" class="hp-fill hp-high" style="width:0%;transition:width .5s"></div></div>
+        </div>
+        <!-- 区切り -->
+        <div style="border-top:.5px solid var(--bd)"></div>
+        <!-- 今日のミッション -->
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div class="mis-title">今日のミッション</div><div class="mis-sub" id="mis-sub">筋トレを3セット記録しよう</div></div>
+          <div class="mis-badge" id="mis-badge">0/3</div>
+        </div>
       </div>
     </div>
     <div class="home-section" style="margin-top:4px">
@@ -696,7 +714,13 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
       <div id="equip-area"></div>
     </div>
     <div class="my-sec">
-      <div class="my-sec-lbl">クイック記録の設定</div>
+      <div class="my-sec-lbl">週トレ目標</div>
+      <div style="background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">週に何回トレーニングする？</div>
+        <div id="weekly-goal-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <div style="font-size:11px;color:var(--t3);margin-top:8px">達成するとボーナスXPがもらえます</div>
+      </div>
+      <div class="my-sec-lbl" style="margin-top:12px">クイック記録の設定</div>
       <div id="qr-settings"></div>
       <div style="font-size:12px;color:var(--t3);margin-top:6px;padding:0 2px">種目・回数を自由に設定できます</div>
     </div>
@@ -823,6 +847,7 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 var cur='login', prev='home';
 var avatar='🐼', nick='FitPanda', userGoal='diet', goalLabel='ダイエット';
 var lv=1, exp=0, streak=1;
+var weeklyGoal=3; // 週○回目標（デフォルト3回）
 var totalDmg=0, totalSets=0;
 var todayDmg=0, todayXp=0, todaySets=0;
 var cds={};
@@ -961,12 +986,90 @@ function rendHome(){
   document.getElementById('h-dmg').textContent=todayDmg;
   document.getElementById('h-streak').textContent=streak+'日';
   document.getElementById('mis-badge').textContent=Math.min(3,todaySets)+'/3';
+  rendWeeklyGoal();
   rendQrGrid();
   rendHomeRaids();
   rendActivityFeed();
 }
 
-// ===== クイック記録 並び替え =====
+function rendWeeklyGoal(){
+  var count=getWeeklyCount();
+  var pct=Math.round(getWeeklyProgress()*100);
+  var achieved=count>=weeklyGoal;
+
+  // タイトル・バッジ
+  var titleEl=document.getElementById('week-goal-title');
+  var subEl=document.getElementById('week-goal-sub');
+  var badgeEl=document.getElementById('week-goal-badge');
+  var barEl=document.getElementById('week-progress-bar');
+  if(titleEl) titleEl.textContent=achieved?'今週の目標 達成！🎉':'今週の目標';
+  if(subEl) subEl.textContent='週'+weeklyGoal+'回トレーニング';
+  if(badgeEl){
+    badgeEl.textContent=count+'/'+weeklyGoal;
+    badgeEl.style.background=achieved?'var(--g)':'var(--gl)';
+    badgeEl.style.color=achieved?'#fff':'var(--g)';
+  }
+  if(barEl){
+    barEl.style.width=pct+'%';
+    barEl.className='hp-fill '+(achieved?'hp-high':pct>=50?'hp-mid':'hp-low');
+  }
+
+  // 曜日ドット（月〜今日）
+  var dotsEl=document.getElementById('week-dots');
+  if(!dotsEl) return;
+  var dayLabels=['月','火','水','木','金','土','日'];
+  var now=new Date();
+  var dow=now.getDay();
+  var mondayOffset=dow===0?6:dow-1;
+  var html='';
+  for(var i=0;i<=6;i++){
+    var d=new Date(now);
+    d.setDate(now.getDate()-(mondayOffset-i));
+    var key=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    var isPast=i<mondayOffset;
+    var isToday=i===mondayOffset;
+    var isFuture=i>mondayOffset;
+    var hasRecord=isToday?(todayDmg>0):(dailyHistory[key]&&dailyHistory[key].dmg>0);
+    var dotBg=isFuture?'var(--bg)':hasRecord?'var(--g)':'rgba(0,0,0,.08)';
+    var labelColor=isToday?'var(--g)':isFuture?'var(--t3)':'var(--t2)';
+    html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">'+
+      '<div style="width:22px;height:22px;border-radius:50%;background:'+dotBg+';display:flex;align-items:center;justify-content:center;'+(isToday?'border:1.5px solid var(--g)':'')+'">'+
+        (hasRecord?'<div style="width:8px;height:8px;border-radius:50%;background:#fff"></div>':'')+'</div>'+
+      '<div style="font-size:10px;font-weight:'+(isToday?800:600)+';color:'+labelColor+'">'+dayLabels[i]+'</div>'+
+    '</div>';
+  }
+  dotsEl.innerHTML=html;
+}
+
+// 今週（月曜始まり）の記録日数を計算
+function getWeeklyCount(){
+  var now=new Date();
+  var dow=now.getDay(); // 0=日
+  var mondayOffset=dow===0?6:dow-1; // 月曜からの日数
+  var count=0;
+  for(var i=0;i<=mondayOffset;i++){
+    var d=new Date(now);
+    d.setDate(now.getDate()-i);
+    var key=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    var isToday=(i===0);
+    if(isToday&&todayDmg>0) count++;
+    else if(!isToday&&dailyHistory[key]&&dailyHistory[key].dmg>0) count++;
+  }
+  return count;
+}
+
+// 今週の目標達成率(0〜1)
+function getWeeklyProgress(){
+  return Math.min(1, getWeeklyCount()/weeklyGoal);
+}
+function setWeeklyGoal(n){
+  weeklyGoal=n;
+  saveUserData();
+  rendMypage();
+  rendHome();
+  showToast('週'+n+'回を目標に設定しました！');
+}
+
 var qrSortMode = false;
 var dragSrcIdx = -1;
 
@@ -2486,6 +2589,19 @@ function rendMypage(){
   qrsHtml+='<button onclick="addQrSlot()" style="width:100%;background:var(--gl);border:none;border-radius:var(--rs);padding:10px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:var(--g);cursor:pointer;margin-top:4px">＋ 追加 / セットを作る</button>';
   document.getElementById('qr-settings').innerHTML=qrsHtml;
 
+  // 週目標ボタン
+  var wgEl=document.getElementById('weekly-goal-btns');
+  if(wgEl){
+    wgEl.innerHTML=[1,2,3,4,5,6,7].map(function(n){
+      var active=n===weeklyGoal;
+      var bonusXp=n*20;
+      return '<div onclick="setWeeklyGoal('+n+')" style="flex:1;min-width:36px;text-align:center;padding:8px 4px;border-radius:var(--rs);border:.5px solid '+(active?'var(--g)':'var(--bd2)')+';background:'+(active?'var(--g)':'var(--ca)')+';cursor:pointer">'+
+        '<div style="font-size:15px;font-weight:900;color:'+(active?'#fff':'var(--tx)')+'">'+n+'</div>'+
+        '<div style="font-size:9px;font-weight:700;color:'+(active?'rgba(255,255,255,.8)':'var(--t3)')+'">+'+bonusXp+'XP</div>'+
+      '</div>';
+    }).join('');
+  }
+
   // 自作種目一覧
   var customHtml=customExercises.length===0
     ? '<div style="font-size:12px;color:var(--t3);padding:10px 0">まだ自作種目がありません</div>'
@@ -2640,6 +2756,15 @@ function addDmg(dmg,type,label,sets){
   saveUserData();
   addToDailyHistory(dmg,label||type,calcXp(type,dmg));
   autoSendDmgToJoinedRaid(dmg);
+  // 週目標達成チェック（今回の記録で達成した瞬間だけ通知）
+  var prevCount=getWeeklyCount()-1; // 記録前のカウント
+  if(prevCount<weeklyGoal && getWeeklyCount()>=weeklyGoal){
+    var bonusXp=weeklyGoal*20;
+    exp+=bonusXp;
+    checkLv();
+    saveUserData();
+    setTimeout(function(){showToast('🎉 今週の目標達成！ ボーナス +'+bonusXp+'XP！');},600);
+  }
   // 活動ログをFirestoreに書き込む
   writeActivityLog('workout', label+'を記録（'+dmg+'ダメ）');
 }
@@ -3008,6 +3133,7 @@ function loadUserData(data){
   streak = data.streak || 1;
   inventory = data.inventory || [];
   joinedRaidId = (data.joined_raid_id !== undefined && data.joined_raid_id !== null) ? data.joined_raid_id : null;
+  weeklyGoal = data.weekly_goal || 3;
   if(data.qr_settings && data.qr_settings.length > 0){
     qrSettings = data.qr_settings;
   } else {
@@ -3042,6 +3168,7 @@ function saveUserData(){
     streak: streak,
     inventory: inventory,
     joined_raid_id: joinedRaidId,
+    weekly_goal: weeklyGoal,
     qr_settings: qrSettings,
     custom_exercises: customExercises,
     updated_at: firebase.firestore.FieldValue.serverTimestamp()
