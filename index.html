@@ -881,6 +881,9 @@ var qrSettings=[
   {id:'pu',icon:'💪',name:'腕立て',amount:10,unit:'回'},
   {id:'pl',icon:'🧘',name:'プランク',amount:30,unit:'秒'}
 ];
+// ローカルストレージから復元（ログイン前でも表示されるように）
+try{var _ls=localStorage.getItem('ktr_qr');if(_ls){var _lsp=JSON.parse(_ls);if(_lsp&&_lsp.length>0)qrSettings=_lsp;}}catch(e){}
+try{var _lc=localStorage.getItem('ktr_cx');if(_lc){var _lcp=JSON.parse(_lc);if(_lcp&&_lcp.length>0)customExercises=_lcp;}}catch(e){}
 
 // NAV
 function goTo(s){
@@ -2720,12 +2723,26 @@ function loadUserData(data){
   streak = data.streak || 1;
   inventory = data.inventory || [];
   joinedRaidId = (data.joined_raid_id !== undefined && data.joined_raid_id !== null) ? data.joined_raid_id : null;
-  if(data.qr_settings && data.qr_settings.length > 0) qrSettings = data.qr_settings;
-  if(data.custom_exercises && data.custom_exercises.length > 0) customExercises = data.custom_exercises;
+  if(data.qr_settings && data.qr_settings.length > 0){
+    qrSettings = data.qr_settings;
+  } else {
+    // Firestoreにない場合はローカルストレージから復元
+    try{var ls=localStorage.getItem('ktr_qr');if(ls){var p=JSON.parse(ls);if(p&&p.length>0)qrSettings=p;}}catch(e){}
+  }
+  if(data.custom_exercises && data.custom_exercises.length > 0){
+    customExercises = data.custom_exercises;
+  } else {
+    try{var lc=localStorage.getItem('ktr_cx');if(lc){var pc=JSON.parse(lc);if(pc&&pc.length>0)customExercises=pc;}}catch(e){}
+  }
 }
 
 // Firestoreへデータ保存
 function saveUserData(){
+  // ローカルストレージにも即時バックアップ
+  try{
+    localStorage.setItem('ktr_qr', JSON.stringify(qrSettings));
+    localStorage.setItem('ktr_cx', JSON.stringify(customExercises));
+  }catch(e){}
   if(!currentUid) return;
   db.collection('users').doc(currentUid).set({
     nickname: nick,
@@ -2778,6 +2795,14 @@ auth.onAuthStateChanged(function(user){
         }
       }).catch(function(){});
   }
+});
+
+// ページ離脱時にローカルストレージへ強制保存
+window.addEventListener('beforeunload', function(){
+  try{
+    localStorage.setItem('ktr_qr', JSON.stringify(qrSettings));
+    localStorage.setItem('ktr_cx', JSON.stringify(customExercises));
+  }catch(e){}
 });
 
 // 5時間ごとのレイドキー
