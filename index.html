@@ -441,11 +441,12 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
   <div class="topbar">
     <div class="topbar-row">
       <div class="topbar-title">仲間</div>
-      <div style="display:flex;gap:6px">
-        <div class="f-chip on" id="ftab-battle" onclick="setFriendTab('battle',this)" style="font-size:12px;padding:5px 12px">⚔️ 共闘中</div>
-        <div class="f-chip" id="ftab-rank" onclick="setFriendTab('rank',this)" style="font-size:12px;padding:5px 12px">🏆 ランキング</div>
-        <div class="f-chip" id="ftab-find" onclick="setFriendTab('find',this)" style="font-size:12px;padding:5px 12px">👥 仲間を探す</div>
-      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px">
+      <div class="f-chip on" id="ftab-battle" onclick="setFriendTab('battle',this)" style="font-size:12px;padding:5px 12px;flex-shrink:0">⚔️ 共闘中</div>
+      <div class="f-chip" id="ftab-guild" onclick="setFriendTab('guild',this)" style="font-size:12px;padding:5px 12px;flex-shrink:0">🏰 ギルド</div>
+      <div class="f-chip" id="ftab-rank" onclick="setFriendTab('rank',this)" style="font-size:12px;padding:5px 12px;flex-shrink:0">🏆 ランキング</div>
+      <div class="f-chip" id="ftab-find" onclick="setFriendTab('find',this)" style="font-size:12px;padding:5px 12px;flex-shrink:0">👥 仲間を探す</div>
     </div>
   </div>
   <div class="scroll">
@@ -455,6 +456,14 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
         <div id="live-raid-banner"></div>
         <div class="sec-lbl" style="margin-top:12px">みんなの活動</div>
         <div id="friends-feed"></div>
+      </div>
+    </div>
+    <!-- ギルドタブ -->
+    <div id="ftab-guild-content" style="display:none">
+      <div style="padding:12px 14px 0">
+        <div id="guild-my-card"></div>
+        <div class="sec-lbl" style="margin-top:14px">全ギルド一覧</div>
+        <div id="guild-list"></div>
       </div>
     </div>
     <!-- ランキングタブ -->
@@ -1134,9 +1143,17 @@ function initFriendsSync(){
 
 var currentFriendTab = 'battle';
 
+// ギルドマスターデータ
+var guildMaster=[
+  {id:'diet',   name:'ダイエット団',   icon:'🏃',color:'#E24B4A',bg:'#FCEBEB',desc:'体を絞って健康的に痩せたい仲間たち'},
+  {id:'muscle', name:'筋力向上隊',     icon:'💪',color:'#BA7517',bg:'#FAEEDA',desc:'もっと強く、もっとデカくなりたい仲間たち'},
+  {id:'health', name:'健康維持クラブ', icon:'❤️',color:'#185FA5',bg:'#E6F1FB',desc:'日々の健康を大切にする仲間たち'},
+  {id:'habit',  name:'習慣化ギルド',   icon:'📅',color:'#534AB7',bg:'#EEEDFE',desc:'まずは続けることを目標にする仲間たち'},
+];
+
 function setFriendTab(tab, el){
   currentFriendTab = tab;
-  ['battle','rank','find'].forEach(function(t){
+  ['battle','guild','rank','find'].forEach(function(t){
     var btn=document.getElementById('ftab-'+t);
     var content=document.getElementById('ftab-'+t+'-content');
     if(btn) btn.classList.toggle('on', t===tab);
@@ -1154,11 +1171,93 @@ function setFriendFilter(f,el){
 
 function rendFriends(){
   if(currentFriendTab==='battle') rendFriendsBattle();
+  else if(currentFriendTab==='guild') rendFriendsGuild();
   else if(currentFriendTab==='rank') rendFriendsRank();
   else rendFriendsFind();
 }
 
-function rendFriendsBattle(){
+function rendFriendsGuild(){
+  // 自分のギルドカード
+  var myGuild=guildMaster.find(function(g){return g.id===userGoal;})||guildMaster[0];
+  var myGuildMembers=realUsers.filter(function(u){return u.goal===myGuild.id;});
+  var myGuildDmg=myGuildMembers.reduce(function(s,u){return s+(u.totalDmg||0);},0)+totalDmg;
+
+  var myCardEl=document.getElementById('guild-my-card');
+  if(myCardEl){
+    myCardEl.innerHTML=
+      '<div style="background:linear-gradient(135deg,'+myGuild.color+','+adjustColor(myGuild.color)+');border-radius:var(--r);padding:16px;color:#fff;margin-bottom:4px">'+
+        '<div style="font-size:11px;font-weight:700;opacity:.8;margin-bottom:4px">あなたのギルド</div>'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+
+          '<div style="font-size:32px">'+myGuild.icon+'</div>'+
+          '<div>'+
+            '<div style="font-size:20px;font-weight:900">'+myGuild.name+'</div>'+
+            '<div style="font-size:12px;opacity:.8">'+myGuild.desc+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:16px">'+
+          '<div style="text-align:center">'+
+            '<div style="font-size:20px;font-weight:900">'+(myGuildMembers.length+1)+'</div>'+
+            '<div style="font-size:10px;opacity:.8">メンバー</div>'+
+          '</div>'+
+          '<div style="text-align:center">'+
+            '<div style="font-size:20px;font-weight:900">'+myGuildDmg.toLocaleString()+'</div>'+
+            '<div style="font-size:10px;opacity:.8">総ダメージ</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      // メンバー一覧
+      '<div class="sec-lbl" style="margin:12px 0 8px">ギルドメンバー</div>'+
+      (myGuildMembers.length===0
+        ? '<div style="font-size:13px;color:var(--t3);padding:10px 0">まだメンバーがいません。仲間が増えると表示されます！</div>'
+        : myGuildMembers.slice(0,8).map(function(u,i){
+            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:.5px solid var(--bd)">'+
+              '<div style="width:32px;height:32px;border-radius:50%;background:'+myGuild.bg+';display:flex;align-items:center;justify-content:center;font-size:16px">'+u.av+'</div>'+
+              '<div style="flex:1"><div style="font-size:13px;font-weight:700">'+u.name+'</div><div style="font-size:11px;color:var(--t3)">Lv.'+u.lv+' · '+(u.totalDmg||0).toLocaleString()+'ダメ</div></div>'+
+              '<div class="fr-cheer-btn" onclick="cheerFriend(\''+u.uid+'\',\''+u.name+'\')">応援</div>'+
+            '</div>';
+          }).join('')
+      );
+    myCardEl.innerHTML+=
+      (myGuildMembers.length>8?'<div style="font-size:12px;color:var(--t3);text-align:center;padding:8px">他'+(myGuildMembers.length-8)+'人が在籍中</div>':'');
+  }
+
+  // 全ギルド一覧
+  var listEl=document.getElementById('guild-list');
+  if(listEl){
+    listEl.innerHTML=guildMaster.map(function(g){
+      var members=realUsers.filter(function(u){return u.goal===g.id;});
+      var totalGuildDmg=members.reduce(function(s,u){return s+(u.totalDmg||0);},0);
+      var isMyGuild=g.id===userGoal;
+      var avatars=members.slice(0,5).map(function(u){
+        return '<div style="width:28px;height:28px;border-radius:50%;background:'+g.bg+';display:flex;align-items:center;justify-content:center;font-size:13px;margin-left:-6px;border:2px solid var(--ca)">'+u.av+'</div>';
+      }).join('');
+      return '<div onclick="'+(isMyGuild?'':'')+'setFriendFilter(\''+g.id+'\',document.createElement(\'div\'))" style="background:var(--ca);border:.5px solid '+(isMyGuild?g.color:'var(--bd)')+';border-radius:var(--r);padding:14px;margin-bottom:10px;cursor:pointer">'+
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'+
+          '<div style="width:44px;height:44px;border-radius:var(--rs);background:'+g.bg+';display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">'+g.icon+'</div>'+
+          '<div style="flex:1">'+
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
+              '<div style="font-size:15px;font-weight:800">'+g.name+'</div>'+
+              (isMyGuild?'<span style="font-size:10px;font-weight:800;background:'+g.color+';color:#fff;padding:2px 6px;border-radius:99px">在籍中</span>':'')+
+            '</div>'+
+            '<div style="font-size:11px;color:var(--t2)">'+g.desc+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;justify-content:space-between">'+
+          '<div style="display:flex;align-items:center;margin-left:6px">'+
+            (avatars||'<div style="font-size:12px;color:var(--t3)">まだメンバーなし</div>')+
+            (members.length>0?'<div style="font-size:12px;font-weight:700;color:var(--t2);margin-left:10px">'+members.length+'人</div>':'')+
+          '</div>'+
+          '<div style="font-size:12px;font-weight:700;color:'+g.color+'">'+totalGuildDmg.toLocaleString()+' 総ダメ</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+}
+
+function adjustColor(hex){
+  // 色を少し暗くする
+  return hex.replace('#','#').slice(0,4)+'5'+hex.slice(5);
+}
   // ライブレイドバナー
   var bannerEl=document.getElementById('live-raid-banner');
   if(bannerEl){
