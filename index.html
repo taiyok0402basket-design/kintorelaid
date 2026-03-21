@@ -438,22 +438,46 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 
 <!-- FRIENDS -->
 <div class="scr off" id="s-friends">
-  <div class="topbar"><div class="topbar-row"><div class="topbar-title">仲間</div><span style="font-size:13px;color:var(--t2);font-weight:600">筋トレ仲間を見つけよう</span></div></div>
-  <div class="filter-row" id="friends-filter">
-    <div class="f-chip on" onclick="setFriendFilter('all',this)">すべて</div>
-    <div class="f-chip" onclick="setFriendFilter('diet',this)">ダイエット</div>
-    <div class="f-chip" onclick="setFriendFilter('muscle',this)">筋力アップ</div>
-    <div class="f-chip" onclick="setFriendFilter('health',this)">健康維持</div>
-    <div class="f-chip" onclick="setFriendFilter('beginner',this)">初心者</div>
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="topbar-title">仲間</div>
+      <div style="display:flex;gap:6px">
+        <div class="f-chip on" id="ftab-battle" onclick="setFriendTab('battle',this)" style="font-size:12px;padding:5px 12px">⚔️ 共闘中</div>
+        <div class="f-chip" id="ftab-rank" onclick="setFriendTab('rank',this)" style="font-size:12px;padding:5px 12px">🏆 ランキング</div>
+        <div class="f-chip" id="ftab-find" onclick="setFriendTab('find',this)" style="font-size:12px;padding:5px 12px">👥 仲間を探す</div>
+      </div>
+    </div>
   </div>
   <div class="scroll">
-    <div style="padding:12px 14px 0">
-      <div class="sec-lbl">おすすめの仲間</div>
-      <div id="friends-list"></div>
+    <!-- 共闘中タブ -->
+    <div id="ftab-battle-content">
+      <div style="padding:12px 14px 0">
+        <div id="live-raid-banner"></div>
+        <div class="sec-lbl" style="margin-top:12px">みんなの活動</div>
+        <div id="friends-feed"></div>
+      </div>
     </div>
-    <div style="padding:4px 14px 0">
-      <div class="sec-lbl">みんなの活動</div>
-      <div id="friends-feed"></div>
+    <!-- ランキングタブ -->
+    <div id="ftab-rank-content" style="display:none">
+      <div style="padding:12px 14px 0">
+        <div class="sec-lbl">今日のダメージTOP</div>
+        <div id="rank-list"></div>
+        <div class="sec-lbl" style="margin-top:14px">総ダメージTOP</div>
+        <div id="rank-total-list"></div>
+      </div>
+    </div>
+    <!-- 仲間を探すタブ -->
+    <div id="ftab-find-content" style="display:none">
+      <div class="filter-row" id="friends-filter" style="padding:10px 14px">
+        <div class="f-chip on" onclick="setFriendFilter('all',this)">すべて</div>
+        <div class="f-chip" onclick="setFriendFilter('diet',this)">ダイエット</div>
+        <div class="f-chip" onclick="setFriendFilter('muscle',this)">筋力アップ</div>
+        <div class="f-chip" onclick="setFriendFilter('health',this)">健康維持</div>
+        <div class="f-chip" onclick="setFriendFilter('habit',this)">習慣化</div>
+      </div>
+      <div style="padding:0 14px">
+        <div id="friends-list"></div>
+      </div>
     </div>
     <div style="height:8px"></div>
   </div>
@@ -751,7 +775,7 @@ function goTo(s){
   prev=cur; cur=s;
   if(s==='mypage')rendMypage();
   if(s==='record')rendRecord();
-  if(s==='friends'){initFriendsSync();rendFriends();}
+  if(s==='friends'){initFriendsSync();rendFriends();setFriendTab(currentFriendTab,document.getElementById('ftab-'+currentFriendTab));}
   if(s==='raids')rendRaidsList();
   if(s==='home')rendHome();
 }
@@ -1108,59 +1132,166 @@ function initFriendsSync(){
   }
 }
 
+var currentFriendTab = 'battle';
+
+function setFriendTab(tab, el){
+  currentFriendTab = tab;
+  ['battle','rank','find'].forEach(function(t){
+    var btn=document.getElementById('ftab-'+t);
+    var content=document.getElementById('ftab-'+t+'-content');
+    if(btn) btn.classList.toggle('on', t===tab);
+    if(content) content.style.display=t===tab?'block':'none';
+  });
+  rendFriends();
+}
+
 function setFriendFilter(f,el){
   friendFilter=f;
-  document.querySelectorAll('.f-chip').forEach(function(c){c.classList.remove('on')});
+  document.querySelectorAll('#friends-filter .f-chip').forEach(function(c){c.classList.remove('on')});
   el.classList.add('on');
   rendFriends();
 }
 
 function rendFriends(){
-  var list = realUsers.length > 0 ? realUsers : friends.map(function(f){
-    return {uid:f.id,av:f.av,name:f.name,goal:f.goal,goalLbl:f.goalLbl,lv:f.lv,bio:'',totalDmg:0,streak:1};
-  });
-  list = list.filter(function(f){return friendFilter==='all'||f.goal===friendFilter;});
+  if(currentFriendTab==='battle') rendFriendsBattle();
+  else if(currentFriendTab==='rank') rendFriendsRank();
+  else rendFriendsFind();
+}
 
-  if(list.length === 0){
-    document.getElementById('friends-list').innerHTML='<div style="text-align:center;padding:32px 0;font-size:14px;color:var(--t3)">まだ仲間がいません<br><span style="font-size:12px">同じ目標の人が登録されると表示されます</span></div>';
-  } else {
-    document.getElementById('friends-list').innerHTML = list.map(function(f){
-      var isFollowing = followingUids.indexOf(f.uid) >= 0;
-      var actTxt = f.streak > 1 ? f.streak+'日連続記録中' : '総ダメージ '+f.totalDmg;
-      return '<div class="friend-card">'+
-        '<div class="fr-av" style="background:var(--gl)">'+f.av+'</div>'+
-        '<div class="fr-info">'+
-          '<div class="fr-name">'+f.name+'</div>'+
-          '<div class="fr-tags">'+
-            '<span class="fr-tag">'+f.goalLbl+'</span>'+
-            '<span class="fr-tag" style="background:var(--al);color:var(--am)">Lv.'+f.lv+'</span>'+
+function rendFriendsBattle(){
+  // ライブレイドバナー
+  var bannerEl=document.getElementById('live-raid-banner');
+  if(bannerEl){
+    var activeRaids=raids.filter(function(r){return r.hp>0&&lv>=r.minLv;});
+    if(activeRaids.length>0){
+      var r=activeRaids[0];
+      var pct=Math.round(r.hp/r.maxHp*100);
+      var hpClass=pct>50?'hp-mid':'hp-low';
+      bannerEl.innerHTML=
+        '<div onclick="openRaid('+r.id+')" style="background:linear-gradient(135deg,#1a3a0a,#2d6012);border-radius:var(--r);padding:14px 16px;cursor:pointer;margin-bottom:4px">'+
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+            '<div style="font-size:28px">'+r.icon+'</div>'+
+            '<div style="flex:1">'+
+              '<div style="font-size:11px;font-weight:700;color:#C0DD97;margin-bottom:2px">⚔️ 開戦中 · '+raidRemainingStr()+'</div>'+
+              '<div style="font-size:16px;font-weight:900;color:#fff">'+r.name+'</div>'+
+            '</div>'+
+            '<div style="font-size:12px;font-weight:800;color:#C0DD97;background:rgba(255,255,255,.15);padding:5px 10px;border-radius:99px">参加する →</div>'+
           '</div>'+
-          (f.bio ? '<div class="fr-activity">'+f.bio+'</div>' : '<div class="fr-activity">'+actTxt+'</div>')+
-        '</div>'+
-        '<div class="fr-btns">'+
-          '<div class="fr-follow-btn'+(isFollowing?' following':'')+'" onclick="toggleFollow(\''+f.uid+'\',\''+f.name+'\',this)">'+(isFollowing?'フォロー中':'フォロー')+'</div>'+
-          '<div class="fr-cheer-btn" onclick="cheerFriend(\''+f.uid+'\',\''+f.name+'\')">応援 💪</div>'+
-        '</div>'+
-      '</div>';
-    }).join('');
+          '<div style="display:flex;justify-content:space-between;margin-bottom:5px">'+
+            '<span style="font-size:11px;color:#C0DD97;font-weight:700">HP '+pct+'%</span>'+
+            '<span style="font-size:11px;color:rgba(255,255,255,.6)">'+r.parts+'人参戦中</span>'+
+          '</div>'+
+          '<div style="background:rgba(0,0,0,.3);border-radius:99px;height:6px;overflow:hidden">'+
+            '<div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div>'+
+          '</div>'+
+        '</div>';
+    } else {
+      bannerEl.innerHTML='<div style="background:var(--bg);border-radius:var(--r);padding:14px;text-align:center;margin-bottom:4px"><div style="font-size:13px;color:var(--t3)">次のレイドまで待機中…</div></div>';
+    }
+  }
+  // 活動フィード
+  var feedEl=document.getElementById('friends-feed');
+  if(!feedEl) return;
+  if(activityLog.length===0){
+    feedEl.innerHTML='<div style="text-align:center;padding:32px 0;font-size:13px;color:var(--t3)">まだ活動がありません<br>みんなが筋トレすると流れてきます 💪</div>';
+    return;
+  }
+  feedEl.innerHTML=activityLog.slice(0,20).map(function(a){
+    var typeIcon=a.txt.indexOf('レイド')>=0?'⚔️':a.txt.indexOf('レベルアップ')>=0?'⬆️':a.txt.indexOf('撃破')>=0?'🎉':'💪';
+    return '<div class="act-row">'+
+      '<div style="width:36px;height:36px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+a.av+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--tx)">'+a.name+'</div>'+
+        '<div style="font-size:12px;color:var(--t2)">'+typeIcon+' '+a.txt+'</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'+
+        '<div style="font-size:10px;color:var(--t3)">'+a.time+'</div>'+
+        (a.uid&&a.uid!==currentUid?'<div class="cheer-btn" onclick="cheerFriend(\''+a.uid+'\',\''+a.name+'\')">応援</div>':'')+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function rendFriendsRank(){
+  // 今日のダメージランキング（activityLogから集計）
+  var todayMap={};
+  activityLog.forEach(function(a){
+    if(a.txt.indexOf('レイド')>=0||a.txt.indexOf('記録')>=0){
+      if(!todayMap[a.uid]) todayMap[a.uid]={uid:a.uid,name:a.name,av:a.av,dmg:0};
+      var m=a.txt.match(/(\d+)ダメ/);
+      if(m) todayMap[a.uid].dmg+=parseInt(m[1]);
+    }
+  });
+  var todayRank=Object.values(todayMap).sort(function(a,b){return b.dmg-a.dmg;}).slice(0,10);
+
+  var rankEl=document.getElementById('rank-list');
+  if(rankEl){
+    if(todayRank.length===0){
+      rankEl.innerHTML='<div style="padding:16px 0;font-size:13px;color:var(--t3);text-align:center">まだ記録がありません</div>';
+    } else {
+      var medals=['🥇','🥈','🥉'];
+      rankEl.innerHTML=todayRank.map(function(u,i){
+        var isMe=u.uid===currentUid;
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+(isMe?'var(--gl)':'var(--ca)')+';border-radius:var(--r);border:.5px solid '+(isMe?'var(--gb)':'var(--bd)')+';margin-bottom:8px">'+
+          '<div style="font-size:18px;width:28px;text-align:center">'+(medals[i]||i+1+'位')+'</div>'+
+          '<div style="width:34px;height:34px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">'+u.av+'</div>'+
+          '<div style="flex:1"><div style="font-size:14px;font-weight:800">'+u.name+(isMe?' (あなた)':'')+'</div></div>'+
+          '<div style="font-size:15px;font-weight:900;color:var(--gm)">'+u.dmg+'<span style="font-size:10px;font-weight:600;color:var(--t3)"> ダメ</span></div>'+
+        '</div>';
+      }).join('');
+    }
   }
 
-  // 活動フィード（リアルユーザーから生成）
-  var feedUsers = realUsers.length > 0 ? realUsers.slice(0,6) : friends;
-  var feedHtml = feedUsers.map(function(f){
-    var acts = ['が今日のミッションを達成','がレイドに参加','が筋トレを記録','が連続記録を更新'];
-    var txt = acts[Math.floor(Math.random()*acts.length)];
-    return '<div class="act-row">'+
-      '<div class="act-av" style="background:var(--gl)">'+f.av+'</div>'+
-      '<div class="act-txt"><strong>'+f.name+'さん</strong>'+txt+'</div>'+
-      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
-        '<div class="act-time">さっき</div>'+
-        '<div class="cheer-btn" onclick="cheerFriend(\''+f.uid+'\',\''+f.name+'\')">応援</div>'+
+  // 総ダメージランキング
+  var totalRank=[...realUsers].sort(function(a,b){return (b.totalDmg||0)-(a.totalDmg||0);}).slice(0,10);
+  var totalEl=document.getElementById('rank-total-list');
+  if(totalEl){
+    if(totalRank.length===0){
+      totalEl.innerHTML='<div style="padding:16px 0;font-size:13px;color:var(--t3);text-align:center">まだデータがありません</div>';
+    } else {
+      totalEl.innerHTML=totalRank.map(function(u,i){
+        var isMe=u.uid===currentUid;
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+(isMe?'var(--gl)':'var(--ca)')+';border-radius:var(--r);border:.5px solid '+(isMe?'var(--gb)':'var(--bd)')+';margin-bottom:8px">'+
+          '<div style="font-size:14px;font-weight:800;color:var(--t3);width:28px;text-align:center">'+(i+1)+'</div>'+
+          '<div style="width:34px;height:34px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">'+u.av+'</div>'+
+          '<div style="flex:1"><div style="font-size:14px;font-weight:800">'+u.name+(isMe?' (あなた)':'')+'</div><div style="font-size:11px;color:var(--t3)">Lv.'+u.lv+'</div></div>'+
+          '<div style="font-size:15px;font-weight:900;color:var(--am)">'+(u.totalDmg||0).toLocaleString()+'<span style="font-size:10px;font-weight:600;color:var(--t3)"> 総ダメ</span></div>'+
+        '</div>';
+      }).join('');
+    }
+  }
+}
+
+function rendFriendsFind(){
+  var list=realUsers.filter(function(f){return friendFilter==='all'||f.goal===friendFilter;});
+  var el=document.getElementById('friends-list');
+  if(!el) return;
+  if(list.length===0){
+    el.innerHTML='<div style="text-align:center;padding:32px 0;font-size:14px;color:var(--t3)">該当する仲間がいません</div>';
+    return;
+  }
+  el.innerHTML=list.map(function(f){
+    var isFollowing=followingUids.indexOf(f.uid)>=0;
+    var actTxt=f.streak>1?'🔥 '+f.streak+'日連続記録中':'💥 総ダメージ '+(f.totalDmg||0).toLocaleString();
+    return '<div style="background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+        '<div style="width:46px;height:46px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid var(--gb);flex-shrink:0">'+f.av+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'+
+            '<div style="font-size:15px;font-weight:800">'+f.name+'</div>'+
+            '<span style="font-size:11px;font-weight:700;background:var(--al);color:var(--am);padding:2px 6px;border-radius:99px">Lv.'+f.lv+'</span>'+
+          '</div>'+
+          '<div style="display:flex;gap:5px;flex-wrap:wrap">'+
+            '<span style="font-size:11px;font-weight:700;background:var(--bll);color:var(--bl);padding:2px 7px;border-radius:99px">'+f.goalLbl+'</span>'+
+            (f.bio?'<span style="font-size:11px;color:var(--t2)">'+f.bio+'</span>':'')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">'+actTxt+'</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<div onclick="toggleFollow(\''+f.uid+'\',\''+f.name+'\',this)" class="fr-follow-btn'+(isFollowing?' following':'')+'" style="flex:1;text-align:center">'+(isFollowing?'✓ フォロー中':'+ フォロー')+'</div>'+
+        '<div onclick="cheerFriend(\''+f.uid+'\',\''+f.name+'\')" class="fr-cheer-btn" style="flex:1;text-align:center">応援する 💪</div>'+
       '</div>'+
     '</div>';
   }).join('');
-  document.getElementById('friends-feed').innerHTML = feedHtml ||
-    '<div style="text-align:center;padding:20px;font-size:13px;color:var(--t3)">まだ活動がありません</div>';
 }
 
 function toggleFollow(uid, name, btn){
