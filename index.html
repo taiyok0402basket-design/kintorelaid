@@ -411,19 +411,93 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 
 <!-- RECORD -->
 <div class="scr off" id="s-record">
-  <div class="topbar"><div class="topbar-row"><div class="topbar-title">筋トレ記録</div><button onclick="saveRecord()" style="background:var(--g);border:none;border-radius:99px;padding:6px 16px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#fff;cursor:pointer" id="save-rec-btn">保存してレイドへ</button></div></div>
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="topbar-title">筋トレ記録</div>
+      <button onclick="saveRecord()" style="background:var(--g);border:none;border-radius:99px;padding:6px 16px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#fff;cursor:pointer" id="save-rec-btn">保存してレイドへ</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <div class="f-chip on" id="rtab-input" onclick="setRecordTab('input',this)" style="font-size:12px;padding:5px 12px;flex-shrink:0">📝 記録する</div>
+      <div class="f-chip" id="rtab-history" onclick="setRecordTab('history',this)" style="font-size:12px;padding:5px 12px;flex-shrink:0">📊 成長グラフ</div>
+      <div class="f-chip" id="rtab-calendar" onclick="setRecordTab('calendar',this)" style="font-size:12px;padding:5px 12px;flex-shrink:0">📅 カレンダー</div>
+    </div>
+  </div>
   <div class="scroll">
-    <div class="card streak-card" style="margin:12px 14px 0">
-      <div class="streak-left"><div style="font-size:28px">🔥</div><div><div class="streak-num" id="rc-streak">1日</div><div class="streak-lbl">連続記録中</div></div></div>
-      <div class="streak-bonus" id="rc-bonus">ボーナスなし</div>
+    <!-- 記録するタブ -->
+    <div id="rtab-input-content">
+      <div class="card streak-card" style="margin:12px 14px 0">
+        <div class="streak-left"><div style="font-size:28px">🔥</div><div><div class="streak-num" id="rc-streak">1日</div><div class="streak-lbl">連続記録中</div></div></div>
+        <div class="streak-bonus" id="rc-bonus">ボーナスなし</div>
+      </div>
+      <div style="padding:12px 14px 0">
+        <div class="sec-lbl">今日の記録を入力</div>
+        <div id="exercise-inputs"></div>
+      </div>
+      <div style="padding:0 14px">
+        <div class="sec-lbl" style="margin-bottom:10px">今日の記録ログ</div>
+        <div id="log-list"><div style="text-align:center;padding:24px 0;font-size:14px;color:var(--t3)">まだ記録がありません</div></div>
+      </div>
     </div>
-    <div style="padding:12px 14px 0">
-      <div class="sec-lbl">今日の記録を入力</div>
-      <div id="exercise-inputs"></div>
+    <!-- 成長グラフタブ -->
+    <div id="rtab-history-content" style="display:none;padding:12px 14px 0">
+      <!-- 累計統計 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+        <div style="background:var(--ca);border-radius:var(--rs);border:.5px solid var(--bd);padding:12px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--gm)" id="stat-total-dmg">0</div>
+          <div style="font-size:10px;font-weight:700;color:var(--t3)">総ダメージ</div>
+        </div>
+        <div style="background:var(--ca);border-radius:var(--rs);border:.5px solid var(--bd);padding:12px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--am)" id="stat-total-sets">0</div>
+          <div style="font-size:10px;font-weight:700;color:var(--t3)">総セット数</div>
+        </div>
+        <div style="background:var(--ca);border-radius:var(--rs);border:.5px solid var(--bd);padding:12px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--rd)" id="stat-streak">0</div>
+          <div style="font-size:10px;font-weight:700;color:var(--t3)">🔥 連続日数</div>
+        </div>
+      </div>
+      <!-- 7日間ダメージグラフ -->
+      <div style="background:var(--ca);border-radius:var(--r);border:.5px solid var(--bd);padding:14px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;margin-bottom:14px">過去7日間のダメージ</div>
+        <div id="week-graph" style="display:flex;align-items:flex-end;gap:6px;height:90px"></div>
+        <div id="week-labels" style="display:flex;gap:6px;margin-top:6px"></div>
+      </div>
+      <!-- 種目別内訳 -->
+      <div style="background:var(--ca);border-radius:var(--r);border:.5px solid var(--bd);padding:14px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;margin-bottom:12px">種目別ダメージ</div>
+        <div id="exercise-breakdown"></div>
+      </div>
+      <!-- 過去ログ -->
+      <div class="sec-lbl" style="margin-bottom:10px">記録履歴</div>
+      <div id="history-log-list"></div>
     </div>
-    <div style="padding:0 14px">
-      <div class="sec-lbl" style="margin-bottom:10px">今日の記録ログ</div>
-      <div id="log-list"><div style="text-align:center;padding:24px 0;font-size:14px;color:var(--t3)">まだ記録がありません</div></div>
+    <!-- カレンダータブ -->
+    <div id="rtab-calendar-content" style="display:none;padding:12px 14px 0">
+      <div style="background:var(--ca);border-radius:var(--r);border:.5px solid var(--bd);padding:14px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div onclick="changeCalMonth(-1)" style="width:32px;height:32px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px">‹</div>
+          <div style="font-size:15px;font-weight:800" id="cal-title">2026年3月</div>
+          <div onclick="changeCalMonth(1)" style="width:32px;height:32px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px">›</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px">
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--t3)">日</div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--t3)">月</div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--t3)">火</div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--t3)">水</div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--t3)">木</div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--t3)">金</div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--t3)">土</div>
+        </div>
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
+      </div>
+      <div style="display:flex;gap:12px;font-size:12px;color:var(--t2);margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:5px"><div style="width:14px;height:14px;border-radius:50%;background:var(--g)"></div>記録あり</div>
+        <div style="display:flex;align-items:center;gap:5px"><div style="width:14px;height:14px;border-radius:50%;background:var(--bg);border:.5px solid var(--bd)"></div>記録なし</div>
+        <div style="display:flex;align-items:center;gap:5px"><div style="width:14px;height:14px;border-radius:50%;background:var(--rd)"></div>今日</div>
+      </div>
+      <div class="card streak-card">
+        <div class="streak-left"><div style="font-size:28px">🔥</div><div><div class="streak-num" id="cal-streak">1日</div><div class="streak-lbl">連続記録中</div></div></div>
+        <div><div style="font-size:12px;font-weight:700;color:var(--t2)" id="cal-month-count">今月0日記録</div></div>
+      </div>
     </div>
     <div style="height:8px"></div>
   </div>
@@ -944,6 +1018,209 @@ function confirmQr(ok){
 }
 
 // RECORD SCREEN
+// 記録タブ切り替え
+var currentRecordTab='input';
+var calYear=new Date().getFullYear();
+var calMonth=new Date().getMonth();
+
+// 日別記録履歴（Firestoreから取得 or ローカルから集計）
+var dailyHistory={}; // {'YYYY-M-D': {dmg, sets, logs:[]}}
+
+function setRecordTab(tab,el){
+  currentRecordTab=tab;
+  ['input','history','calendar'].forEach(function(t){
+    var btn=document.getElementById('rtab-'+t);
+    var content=document.getElementById('rtab-'+t+'-content');
+    if(btn) btn.classList.toggle('on',t===tab);
+    if(content) content.style.display=t===tab?'block':'none';
+  });
+  // 保存ボタンは記録タブのみ表示
+  var saveBtn=document.getElementById('save-rec-btn');
+  if(saveBtn) saveBtn.style.display=tab==='input'?'':'none';
+  if(tab==='history') rendHistoryTab();
+  if(tab==='calendar') rendCalendarTab();
+}
+
+function getDailyKey(date){
+  var d=date||new Date();
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+
+// ログを追加するたびに日別履歴に記録
+function addToDailyHistory(dmg,label,xp){
+  var key=getDailyKey();
+  if(!dailyHistory[key]) dailyHistory[key]={dmg:0,sets:0,logs:[]};
+  dailyHistory[key].dmg+=dmg;
+  dailyHistory[key].sets+=1;
+  dailyHistory[key].logs.push({label:label,dmg:dmg,xp:xp,time:new Date().toLocaleTimeString('ja',{hour:'2-digit',minute:'2-digit'})});
+  // Firestoreに保存
+  if(currentUid){
+    db.collection('users').doc(currentUid).collection('daily_logs').doc(key).set(dailyHistory[key],{merge:true}).catch(function(){});
+  }
+}
+
+// Firestoreから過去30日分の履歴を取得
+function loadDailyHistory(){
+  if(!currentUid) return;
+  db.collection('users').doc(currentUid).collection('daily_logs')
+    .orderBy(firebase.firestore.FieldPath.documentId(),'desc')
+    .limit(30)
+    .get().then(function(snap){
+      snap.forEach(function(doc){
+        dailyHistory[doc.id]=doc.data();
+      });
+      // 今日分はローカルのlogsからも補完
+      var today=getDailyKey();
+      if(logs.length>0){
+        if(!dailyHistory[today]) dailyHistory[today]={dmg:todayDmg,sets:todaySets,logs:[]};
+      }
+    }).catch(function(){});
+}
+
+function rendHistoryTab(){
+  // 累計統計
+  var el=document.getElementById('stat-total-dmg');
+  if(el) el.textContent=totalDmg.toLocaleString();
+  var el2=document.getElementById('stat-total-sets');
+  if(el2) el2.textContent=totalSets.toLocaleString();
+  var el3=document.getElementById('stat-streak');
+  if(el3) el3.textContent=streak+'日';
+
+  // 過去7日間グラフ
+  var days=[];
+  for(var i=6;i>=0;i--){
+    var d=new Date(); d.setDate(d.getDate()-i);
+    var key=getDailyKey(d);
+    var dmg=dailyHistory[key]?dailyHistory[key].dmg:0;
+    if(i===0) dmg=Math.max(dmg,todayDmg); // 今日は最新値
+    days.push({label:['日','月','火','水','木','金','土'][d.getDay()],dmg:dmg,isToday:i===0});
+  }
+  var maxDmg=Math.max.apply(null,days.map(function(d){return d.dmg;}),1)||1;
+  var graphEl=document.getElementById('week-graph');
+  var labelsEl=document.getElementById('week-labels');
+  if(graphEl){
+    graphEl.innerHTML=days.map(function(d){
+      var h=maxDmg>0?Math.max(4,Math.round(d.dmg/maxDmg*80)):4;
+      var color=d.isToday?'var(--g)':d.dmg>0?'var(--gm)':'var(--bg)';
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">'+
+        (d.dmg>0?'<div style="font-size:9px;font-weight:700;color:var(--t3)">'+d.dmg+'</div>':'<div style="font-size:9px"></div>')+
+        '<div style="width:100%;background:'+color+';border-radius:4px 4px 0 0;height:'+h+'px;transition:height .4s"></div>'+
+      '</div>';
+    }).join('');
+  }
+  if(labelsEl){
+    labelsEl.innerHTML=days.map(function(d){
+      return '<div style="flex:1;text-align:center;font-size:10px;font-weight:'+(d.isToday?'800':'600')+';color:'+(d.isToday?'var(--g)':'var(--t3)')+'">'+d.label+'</div>';
+    }).join('');
+  }
+
+  // 種目別内訳（logsから集計）
+  var byType={};
+  logs.forEach(function(l){
+    if(!byType[l.name]) byType[l.name]={dmg:0,count:0,icon:l.icon};
+    byType[l.name].dmg+=l.dmg;
+    byType[l.name].count+=1;
+  });
+  var bkEl=document.getElementById('exercise-breakdown');
+  if(bkEl){
+    var entries=Object.entries(byType).sort(function(a,b){return b[1].dmg-a[1].dmg;});
+    if(entries.length===0){
+      bkEl.innerHTML='<div style="font-size:13px;color:var(--t3);text-align:center;padding:10px 0">今日の記録がありません</div>';
+    } else {
+      var maxEx=entries[0][1].dmg||1;
+      bkEl.innerHTML=entries.map(function(e){
+        var pct=Math.round(e[1].dmg/maxEx*100);
+        return '<div style="margin-bottom:10px">'+
+          '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
+            '<div style="font-size:13px;font-weight:700">'+e[1].icon+' '+e[0]+'</div>'+
+            '<div style="font-size:12px;font-weight:700;color:var(--gm)">'+e[1].dmg+'ダメ</div>'+
+          '</div>'+
+          '<div style="background:var(--bg);border-radius:99px;height:6px;overflow:hidden">'+
+            '<div style="height:100%;width:'+pct+'%;background:var(--gm);border-radius:99px;transition:width .4s"></div>'+
+          '</div>'+
+        '</div>';
+      }).join('');
+    }
+  }
+
+  // 過去ログ一覧
+  var histEl=document.getElementById('history-log-list');
+  if(histEl){
+    var allKeys=Object.keys(dailyHistory).sort().reverse();
+    if(allKeys.length===0&&logs.length===0){
+      histEl.innerHTML='<div style="text-align:center;padding:24px;font-size:13px;color:var(--t3)">まだ記録がありません</div>';
+    } else {
+      // 今日のログを先頭に
+      var todayKey=getDailyKey();
+      var html='';
+      if(logs.length>0){
+        html+='<div style="font-size:12px;font-weight:700;color:var(--t3);padding:4px 0 8px">今日</div>';
+        html+=logs.slice(0,10).map(function(l){
+          return '<div class="log-row"><div class="log-icon">'+l.icon+'</div><div style="flex:1"><div class="log-name">'+l.name+'</div><div class="log-time">'+l.time+'</div></div><div style="text-align:right"><div class="log-xp">+'+l.xp+' XP</div><div class="log-dmg">'+l.dmg+'ダメ</div></div></div>';
+        }).join('');
+      }
+      // 過去の日付
+      allKeys.filter(function(k){return k!==todayKey;}).slice(0,14).forEach(function(key){
+        var d=dailyHistory[key];
+        var parts=key.split('-');
+        var label=parts[1]+'月'+parts[2]+'日';
+        html+='<div style="font-size:12px;font-weight:700;color:var(--t3);padding:12px 0 8px">'+label+'</div>';
+        html+='<div style="background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:12px 14px;margin-bottom:6px">'+
+          '<div style="display:flex;justify-content:space-between">'+
+            '<div style="font-size:14px;font-weight:700">'+d.sets+'セット記録</div>'+
+            '<div style="font-size:14px;font-weight:800;color:var(--gm)">'+d.dmg+'ダメージ</div>'+
+          '</div>'+
+        '</div>';
+      });
+      histEl.innerHTML=html||'<div style="text-align:center;padding:24px;font-size:13px;color:var(--t3)">まだ記録がありません</div>';
+    }
+  }
+}
+
+function rendCalendarTab(){
+  var now=new Date();
+  var d=document.getElementById('cal-title');
+  if(d) d.textContent=calYear+'年'+(calMonth+1)+'月';
+  var calEl=document.getElementById('cal-grid');
+  if(!calEl) return;
+  var firstDay=new Date(calYear,calMonth,1).getDay();
+  var daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  var today=now.getDate();
+  var isCurrentMonth=calYear===now.getFullYear()&&calMonth===now.getMonth();
+  var recordedDays=0;
+  var cells='';
+  for(var i=0;i<firstDay;i++){
+    cells+='<div></div>';
+  }
+  for(var day=1;day<=daysInMonth;day++){
+    var key=calYear+'-'+(calMonth+1)+'-'+day;
+    var hasRecord=!!(dailyHistory[key]&&dailyHistory[key].dmg>0)||(isCurrentMonth&&day===today&&todayDmg>0);
+    var isToday=isCurrentMonth&&day===today;
+    if(hasRecord) recordedDays++;
+    var bg=isToday?'var(--rd)':hasRecord?'var(--g)':'var(--bg)';
+    var color=hasRecord||isToday?'#fff':'var(--t3)';
+    var dmgTxt=hasRecord&&!isToday?(dailyHistory[key]?dailyHistory[key].dmg:todayDmg):'';
+    cells+='<div style="aspect-ratio:1;border-radius:50%;background:'+bg+';display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:default">'+
+      '<div style="font-size:12px;font-weight:800;color:'+color+'">'+day+'</div>'+
+      (dmgTxt?'<div style="font-size:7px;color:'+color+';opacity:.8">'+dmgTxt+'</div>':'')+
+    '</div>';
+  }
+  calEl.innerHTML=cells;
+
+  // 今月の記録日数
+  var monthCount=document.getElementById('cal-month-count');
+  if(monthCount) monthCount.textContent='今月'+recordedDays+'日記録';
+  var calStreak=document.getElementById('cal-streak');
+  if(calStreak) calStreak.textContent=streak+'日';
+}
+
+function changeCalMonth(dir){
+  calMonth+=dir;
+  if(calMonth<0){calMonth=11;calYear--;}
+  if(calMonth>11){calMonth=0;calYear++;}
+  rendCalendarTab();
+}
+
 function rendRecord(){
   document.getElementById('rc-streak').textContent=streak+'日';
   document.getElementById('rc-bonus').textContent=streak>=14?'14日: +20%':streak>=7?'7日: +10%':streak>=3?'3日: +5%':'ボーナスなし';
@@ -1685,6 +1962,7 @@ function addDmg(dmg,type,label,sets){
   var exObj=exercises.find(function(e){return e.id===type;});
   logs.unshift({icon:exObj?exObj.icon:'💪',name:label||type,dmg:dmg,xp:calcXp(type,dmg),time:hh+':'+mm});
   saveUserData();
+  addToDailyHistory(dmg,label||type,calcXp(type,dmg));
   // 活動ログをFirestoreに書き込む
   writeActivityLog('workout', label+'を記録（'+dmg+'ダメ）');
 }
@@ -2068,6 +2346,7 @@ function goToHome(){
   initRaidSync();
   initFriendsSync();
   initActivitySync();
+  loadDailyHistory();
   showToast('ようこそ、' + nick + '！仲間と一緒に頑張ろう💪');
 }
 
