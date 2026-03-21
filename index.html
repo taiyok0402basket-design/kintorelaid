@@ -248,6 +248,14 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 <body>
 <div id="app">
 
+<!-- 記録確認オーバーレイ -->
+<div id="rec-confirm-overlay" onclick="if(event.target===this)closeRecordConfirm()" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end;justify-content:center">
+  <div style="background:var(--ca);border-radius:22px 22px 0 0;padding:24px 20px 44px;width:100%;max-width:430px;max-height:80vh;overflow-y:auto">
+    <div style="width:40px;height:4px;border-radius:99px;background:var(--bd2);margin:0 auto 20px"></div>
+    <div id="rec-confirm-content"></div>
+  </div>
+</div>
+
 <!-- 撃破モーダル -->
 <div id="defeat-modal-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:flex-end;justify-content:center">
   <div style="background:var(--ca);border-radius:22px 22px 0 0;padding:24px 20px 44px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto">
@@ -927,10 +935,11 @@ function rendQrGrid(){
     var q=qrSettings[i];
     var cdId='qcd-'+q.id+i;
     var btnId='qr-'+q.id+i;
-    html+='<button class="qr-btn" id="'+btnId+'" onclick="quickRec(\''+q.id+'\','+calcDmg(q.id,q.amount)+',30,\''+q.name+'\',\''+btnId+'\',\''+cdId+'\')">';
+    var dmg=calcDmg(q.id,q.amount);
+    html+='<button class="qr-btn" id="'+btnId+'" onclick="quickRec(\''+q.id+'\','+dmg+',30,\''+q.name+' '+q.amount+q.unit+'\',\''+btnId+'\',\''+cdId+'\')">';
     html+='<div class="qr-icon">'+q.icon+'</div>';
     html+='<div class="qr-name">'+q.name+' '+q.amount+q.unit+'</div>';
-    html+='<div class="qr-dmg">+'+calcDmg(q.id,q.amount)+' ダメ</div>';
+    html+='<div class="qr-dmg">+'+dmg+' ダメ</div>';
     html+='<div class="qr-cd" id="'+cdId+'"></div></button>';
   }
   document.getElementById('qr-grid').innerHTML=html;
@@ -1339,30 +1348,97 @@ function updPreview(id){
 
 function saveRecord(){
   var totalD=0, totalX=0, sets=0;
+  var recItems=[];
   exercises.forEach(function(ex){
     if(ex.val>0){
       var d=calcDmg(ex.id,ex.val);
       var x=calcXp(ex.id,ex.val);
       totalD+=d; totalX+=x; sets++;
-      addDmg(d,ex.id,ex.name,Math.ceil(ex.val/(ex.per||10)));
+      recItems.push({type:ex.id,name:ex.name,val:ex.val,unit:ex.unit,dmg:d,xp:x,sets:Math.ceil(ex.val/(ex.per||10))});
       ex.val=0;
     }
   });
-  // その他のトレーニング
   otherRows.forEach(function(r){
     if(r.val>0&&r.name.trim()){
       var d=r.unit==='km'?Math.round(r.val*80):r.unit==='sec'?Math.round(r.val/30*40):r.unit==='min'?Math.round(r.val*2*40):Math.round(r.val/10*50);
       var x=Math.round(d*0.2);
       totalD+=d; totalX+=x; sets++;
-      addDmg(d,'sq',r.name.trim()+'（自由記録）',1);
+      recItems.push({type:'sq',name:r.name.trim()+'（自由記録）',val:r.val,unit:r.unit,dmg:d,xp:x,sets:1});
     }
   });
   otherRows=[];
   if(totalD===0){showToast('記録を入力してください');return;}
-  pendingDmg=totalD; pendingXp=totalX;
-  document.getElementById('rsm-summary').textContent='合計ダメージ '+totalD+' · XP +'+totalX;
-  showRaidSelectModal();
+
+  // 参加中レイドがあれば確認モーダルを出す
+  if(joinedRaidId!==null){
+    var r=raids[joinedRaidId];
+    var confirmHtml=
+      '<div style="font-size:18px;font-weight:900;margin-bottom:6px">記録を保存しますか？</div>'+
+      '<div style="font-size:13px;color:var(--t2);margin-bottom:16px">以下の内容を記録します</div>'+
+      '<div style="background:var(--bg);border-radius:var(--rs);padding:12px;margin-bottom:14px">'+
+      recItems.map(function(it){
+        return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:.5px solid var(--bd)">'+
+          '<span style="font-size:13px;font-weight:700">'+it.name+' '+it.val+it.unit+'</span>'+
+          '<span style="font-size:13px;font-weight:800;color:var(--gm)">'+it.dmg+'ダメ</span>'+
+        '</div>';
+      }).join('')+
+      '<div style="display:flex;justify-content:space-between;padding:6px 0 0;font-size:14px;font-weight:900">'+
+        '<span>合計</span><span style="color:var(--gm)">'+totalD+'ダメ · XP+'+totalX+'</span>'+
+      '</div>'+
+      '</div>'+
+      '<div style="background:var(--gl);border-radius:var(--rs);padding:10px 12px;margin-bottom:16px;display:flex;align-items:center;gap:8px">'+
+        '<div style="font-size:20px">'+r.icon+'</div>'+
+        '<div><div style="font-size:12px;font-weight:800;color:var(--g)">⚔️ '+r.name+'へ自動送信</div>'+
+        '<div style="font-size:11px;color:var(--t2)">参戦中のレイドにダメージが入ります</div></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<div onclick="closeRecordConfirm()" style="flex:1;background:var(--bg);border-radius:14px;padding:12px;text-align:center;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer">キャンセル</div>'+
+        '<div onclick="commitRecord()" style="flex:2;background:var(--g);border-radius:14px;padding:12px;text-align:center;font-size:14px;font-weight:800;color:#fff;cursor:pointer">保存して送信 💪</div>'+
+      '</div>';
+    document.getElementById('rec-confirm-content').innerHTML=confirmHtml;
+    document.getElementById('rec-confirm-overlay').style.display='flex';
+    // 一時保存
+    _pendingRecItems=recItems;
+    _pendingRecDmg=totalD;
+    _pendingRecXp=totalX;
+    return;
+  }
+
+  // 参加中レイドがない場合は従来通りレイド選択モーダル
+  _pendingRecItems=recItems;
+  _pendingRecDmg=totalD;
+  _pendingRecXp=totalX;
+  commitRecord(true);
+}
+
+var _pendingRecItems=[];
+var _pendingRecDmg=0;
+var _pendingRecXp=0;
+
+function closeRecordConfirm(){
+  document.getElementById('rec-confirm-overlay').style.display='none';
+  _pendingRecItems=[];
+}
+
+function commitRecord(showModal){
+  document.getElementById('rec-confirm-overlay').style.display='none';
+  if(_pendingRecItems.length===0) return;
+  _pendingRecItems.forEach(function(it){
+    addDmg(it.dmg,it.type,it.name,it.sets);
+  });
+  pendingDmg=_pendingRecDmg;
+  pendingXp=_pendingRecXp;
+  _pendingRecItems=[];
   rendRecord();
+  // 参加中レイドがあれば自動反映済み（addDmg内のautoSendDmgToJoinedRaidで処理）
+  if(joinedRaidId===null){
+    // 参加してないならレイド選択モーダルを出す
+    document.getElementById('rsm-summary').textContent='合計ダメージ '+pendingDmg+' · XP +'+pendingXp;
+    showRaidSelectModal();
+  } else {
+    showToast('記録を保存しました！ '+pendingDmg+'ダメージを送った💥');
+    goTo('home');
+  }
 }
 
 function showRaidSelectModal(){
@@ -1395,7 +1471,7 @@ function joinRaid(i){
   saveJoinedRaid();
   document.getElementById('raid-select-modal').classList.remove('show');
   showToast('⚔️ '+r.name+'に参加した！クイック記録でダメージを与えよう');
-  rendHome();
+  goTo('home');
 }
 
 // 参加中レイドから離脱
