@@ -2619,8 +2619,7 @@ function initRaidSync(){
           if(existing[i]) return existing[i];
           return {id:r.id,name:r.name,hp:r.maxHp,maxHp:r.maxHp,parts:0};
         });
-        return raidRef.update({raids:merged});
-      }
+
     }
   }).then(function(){
     if(raidUnsubscribe) raidUnsubscribe();
