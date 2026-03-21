@@ -515,6 +515,9 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
         <button class="attack-btn" id="atk-pl" onclick="doAtk('pl',40,35,'プランク','atk-pl','acd-pl')"><div class="attack-icon">🧘</div><div class="attack-name">プランク30秒</div><div class="attack-dmg">+40 ダメージ</div><div class="attack-cd" id="acd-pl"></div></button>
         <button class="attack-btn" id="atk-ab" onclick="doAtk('ab',40,28,'腹筋','atk-ab','acd-ab')"><div class="attack-icon">🔥</div><div class="attack-name">腹筋10回</div><div class="attack-dmg">+40 ダメージ</div><div class="attack-cd" id="acd-ab"></div></button>
       </div>
+      <div id="admin-oneshot-btn" style="display:none;margin-top:12px">
+        <div onclick="adminOneShotKill()" style="width:100%;background:#E24B4A;border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#fff;text-align:center;cursor:pointer">⚡ 管理者：一撃撃破</div>
+      </div>
     </div>
     <div class="raid-participants">
       <div class="sec-lbl" style="margin-bottom:10px">参加中の仲間</div>
@@ -1259,7 +1262,18 @@ function openRaid(i){
     '</div>';
   }).join('');
   document.getElementById('raid-parts-list').innerHTML=partHtml;
+  // 管理者ボタンの表示制御
+  var adminBtn=document.getElementById('admin-oneshot-btn');
+  if(adminBtn) adminBtn.style.display=isAdmin()?'block':'none';
   goTo('raid');
+}
+
+function adminOneShotKill(){
+  if(!isAdmin()) return;
+  var i=currentRaidIdx;
+  if(raids[i].hp<=0){showToast('すでに撃破済みです');return;}
+  updateRaidHpInFirestore(i, raids[i].hp);
+  showToast('⚡ 管理者権限で一撃撃破！');
 }
 
 function doAtk(type,dmg,cd,label,btnId,cdId){
@@ -1680,7 +1694,7 @@ function doDeleteData(){
     lv=1; exp=0; streak=1; todayDmg=0; todayXp=0; todaySets=0;
     totalDmg=0; totalSets=0; nick='FitPanda'; avatar='🐼';
     userGoal='diet'; goalLabel='ダイエット';
-    logs=[]; myRaidDmg=[0,0,0]; currentUid=null; inventory=[];
+    logs=[]; myRaidDmg=[0,0,0]; currentUid=null; currentEmail=null; inventory=[];
     if(activityUnsubscribe){activityUnsubscribe(); activityUnsubscribe=null;}
     if(friendsUnsubscribe){friendsUnsubscribe(); friendsUnsubscribe=null;}
     if(raidUnsubscribe){raidUnsubscribe(); raidUnsubscribe=null;}
@@ -1744,6 +1758,12 @@ var auth = firebase.auth();
 var db = firebase.firestore();
 var provider = new firebase.auth.GoogleAuthProvider();
 var currentUid = null;
+var currentEmail = null;
+var ADMIN_EMAIL = 'taiyok0402basket@gmail.com';
+
+function isAdmin(){
+  return currentEmail === ADMIN_EMAIL;
+}
 
 // Googleログイン実行
 function loginWithGoogle(){
@@ -1751,6 +1771,7 @@ function loginWithGoogle(){
   auth.signInWithPopup(provider)
     .then(function(result){
       currentUid = result.user.uid;
+      currentEmail = result.user.email;
       return db.collection('users').doc(currentUid).get();
     })
     .then(function(doc){
@@ -1824,6 +1845,7 @@ auth.onAuthStateChanged(function(user){
   if(authHandled) return;
   if(user && cur === 'login'){
     currentUid = user.uid;
+    currentEmail = user.email;
     db.collection('users').doc(currentUid).get()
       .then(function(doc){
         if(doc.exists && doc.data().nickname){
