@@ -1389,36 +1389,37 @@ function addToDailyHistory(dmg,label,xp){
 
 // Firestoreから過去30日分の履歴を取得
 function loadDailyHistory(callback){
-  if(!currentUid){ if(callback) callback(); return; }
+  if(!currentUid){
+    var today=getDailyKey();
+    if(todayDmg>0) dailyHistory[today]={dmg:todayDmg,sets:todaySets,logs:logs.slice()};
+    if(callback) callback();
+    return;
+  }
   db.collection('users').doc(currentUid).collection('daily_logs')
-    .orderBy(firebase.firestore.FieldPath.documentId(),'desc')
-    .limit(30)
+    .limit(60)
     .get().then(function(snap){
+      dailyHistory={};
       snap.forEach(function(doc){
         dailyHistory[doc.id]=doc.data();
       });
-      // daily_logsが空 → activity_logsから日別に再構築
       if(snap.empty){
         return _rebuildHistoryFromActivityLogs(callback);
       }
-      // 今日分はローカルのlogsからも補完
+      // 今日分はローカルで上書き補完
       var today=getDailyKey();
-      if(logs.length>0){
-        if(!dailyHistory[today]) dailyHistory[today]={dmg:todayDmg,sets:todaySets,logs:[]};
-        else { dailyHistory[today].dmg=Math.max(dailyHistory[today].dmg, todayDmg); }
+      if(todayDmg>0){
+        dailyHistory[today]={dmg:todayDmg,sets:todaySets,logs:logs.slice()};
       }
       if(callback) callback();
     }).catch(function(){
-      // エラー時もactivity_logsから再構築を試みる
       _rebuildHistoryFromActivityLogs(callback);
     });
 }
 
 function _rebuildHistoryFromActivityLogs(callback){
+  // user_idのみでフィルタ（orderBy不要でインデックス不要）
   db.collection('activity_logs')
     .where('user_id','==',currentUid)
-    .orderBy('created_at','desc')
-    .limit(200)
     .get().then(function(snap){
       snap.forEach(function(doc){
         var d=doc.data();
@@ -1437,13 +1438,19 @@ function _rebuildHistoryFromActivityLogs(callback){
         if(!dailyHistory[today]) dailyHistory[today]={dmg:todayDmg,sets:todaySets,logs:[]};
         else dailyHistory[today].dmg=Math.max(dailyHistory[today].dmg, todayDmg);
       }
-      // 再構築したデータをdaily_logsに書き戻す（次回から使えるよう）
+      // 再構築したデータをdaily_logsに書き戻す
       Object.keys(dailyHistory).forEach(function(key){
         db.collection('users').doc(currentUid).collection('daily_logs').doc(key)
           .set(dailyHistory[key],{merge:true}).catch(function(){});
       });
       if(callback) callback();
-    }).catch(function(){ if(callback) callback(); });
+    }).catch(function(e){
+      console.log('activity_logs取得失敗:', e);
+      // activity_logsも失敗した場合はローカルデータだけで表示
+      var today=getDailyKey();
+      if(todayDmg>0) dailyHistory[today]={dmg:todayDmg,sets:todaySets,logs:[]};
+      if(callback) callback();
+    });
 }
 
 function rendHistoryTab(){
