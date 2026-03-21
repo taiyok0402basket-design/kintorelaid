@@ -1397,6 +1397,10 @@ function loadDailyHistory(callback){
       snap.forEach(function(doc){
         dailyHistory[doc.id]=doc.data();
       });
+      // daily_logsが空 → activity_logsから日別に再構築
+      if(snap.empty){
+        return _rebuildHistoryFromActivityLogs(callback);
+      }
       // 今日分はローカルのlogsからも補完
       var today=getDailyKey();
       if(logs.length>0){
@@ -1404,16 +1408,47 @@ function loadDailyHistory(callback){
         else { dailyHistory[today].dmg=Math.max(dailyHistory[today].dmg, todayDmg); }
       }
       if(callback) callback();
+    }).catch(function(){
+      // エラー時もactivity_logsから再構築を試みる
+      _rebuildHistoryFromActivityLogs(callback);
+    });
+}
+
+function _rebuildHistoryFromActivityLogs(callback){
+  db.collection('activity_logs')
+    .where('user_id','==',currentUid)
+    .orderBy('created_at','desc')
+    .limit(200)
+    .get().then(function(snap){
+      snap.forEach(function(doc){
+        var d=doc.data();
+        if(!d.created_at || d.type!=='workout') return;
+        var date=d.created_at.toDate ? d.created_at.toDate() : new Date(d.created_at);
+        var key=date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
+        var m=d.text&&d.text.match(/(\d+)ダメ/);
+        var dmg=m?parseInt(m[1]):0;
+        if(!dailyHistory[key]) dailyHistory[key]={dmg:0,sets:0,logs:[]};
+        dailyHistory[key].dmg+=dmg;
+        dailyHistory[key].sets+=1;
+      });
+      // 今日分をローカルで補完
+      var today=getDailyKey();
+      if(todayDmg>0){
+        if(!dailyHistory[today]) dailyHistory[today]={dmg:todayDmg,sets:todaySets,logs:[]};
+        else dailyHistory[today].dmg=Math.max(dailyHistory[today].dmg, todayDmg);
+      }
+      // 再構築したデータをdaily_logsに書き戻す（次回から使えるよう）
+      Object.keys(dailyHistory).forEach(function(key){
+        db.collection('users').doc(currentUid).collection('daily_logs').doc(key)
+          .set(dailyHistory[key],{merge:true}).catch(function(){});
+      });
+      if(callback) callback();
     }).catch(function(){ if(callback) callback(); });
 }
 
 function rendHistoryTab(){
-  // データがない場合はFirestoreから取得してから描画
-  if(Object.keys(dailyHistory).length === 0 && currentUid){
-    loadDailyHistory(function(){ _renderHistoryContent(); });
-  } else {
-    _renderHistoryContent();
-  }
+  // 毎回最新データを取得してから描画
+  loadDailyHistory(function(){ _renderHistoryContent(); });
 }
 
 function _renderHistoryContent(){
@@ -1517,11 +1552,7 @@ function _renderHistoryContent(){
 } // end _renderHistoryContent
 
 function rendCalendarTab(){
-  if(Object.keys(dailyHistory).length === 0 && currentUid){
-    loadDailyHistory(function(){ _renderCalendarContent(); });
-  } else {
-    _renderCalendarContent();
-  }
+  loadDailyHistory(function(){ _renderCalendarContent(); });
 }
 
 function _renderCalendarContent(){
