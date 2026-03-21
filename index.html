@@ -96,11 +96,11 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
 .qr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
 .qr-btn{background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:13px 10px;cursor:pointer;text-align:center;font-family:'Nunito',sans-serif;transition:all .15s}
 .qr-btn:active{transform:scale(.97)}
-.qr-btn.cd{opacity:.5;pointer-events:none}
+.qr-btn.cd{opacity:.6;pointer-events:none;background:var(--bg)}
 .qr-icon{font-size:22px;margin-bottom:4px}
 .qr-name{font-size:12px;font-weight:700;margin-bottom:2px}
 .qr-dmg{font-size:11px;font-weight:700;color:var(--gm)}
-.qr-cd{font-size:10px;font-weight:600;color:var(--t3);margin-top:2px}
+.qr-cd{font-size:10px;font-weight:700;color:var(--am);margin-top:3px;min-height:14px}
 .raid-mini{padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:transform .1s;display:flex;align-items:center;gap:12px}
 .raid-mini:active{transform:scale(.98)}
 .rm-icon{width:48px;height:48px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
@@ -2080,10 +2080,9 @@ function rendMypage(){
 function editQr(i){
   var q=qrSettings[i];
   var v=prompt(q.name+'の量を入力（'+q.unit+'）',q.amount);
-  if(v&&parseInt(v)>0){qrSettings[i].amount=parseInt(v);rendMypage();rendHome();showToast('クイック記録を更新しました');}
+  if(v&&parseInt(v)>0){qrSettings[i].amount=parseInt(v);rendMypage();rendHome();saveUserData();showToast('クイック記録を更新しました');}
 }
 function addQrSlot(){
-  // 標準種目 + カスタム種目を合わせて選択肢を出す
   var stdOptions=exercises.map(function(e){return {id:e.id,icon:e.icon,name:e.name,unit:e.unit,amount:e.per||10,custom:false};});
   var customOptions=customExercises.filter(function(c){
     return !qrSettings.find(function(q){return q.id===c.id;});
@@ -2113,13 +2112,13 @@ function confirmAddQr(i){
   var o=window._addQrOptions[i];
   qrSettings.push({id:o.id,icon:o.icon,name:o.name,amount:o.amount,unit:o.unit});
   document.getElementById('add-qr-modal').classList.remove('show');
-  rendMypage();rendHome();
+  rendMypage();rendHome();saveUserData();
   showToast(o.name+'をクイック記録に追加しました！');
 }
 function removeQrSlot(i){
   if(qrSettings.length<=1){showToast('最低1つは必要です');return;}
   qrSettings.splice(i,1);
-  rendMypage();rendHome();showToast('削除しました');
+  rendMypage();rendHome();saveUserData();showToast('削除しました');
 }
 function saveCustomExercise(){
   var nameEl=document.getElementById('custom-ex-name');
@@ -2133,6 +2132,7 @@ function saveCustomExercise(){
   customExercises.push({id:id,name:name,unit:unit,defaultVal:val,dmgPer:unit==='km'?80:unit==='sec'?40:unit==='min'?80:50});
   nameEl.value=''; valEl.value='';
   document.getElementById('custom-ex-modal').classList.remove('show');
+  saveUserData();
   rendMypage();
   showToast(name+'を自作種目に追加しました！');
 }
@@ -2173,11 +2173,21 @@ function startCd(btnId,cdId,sec,isQr){
   var cdEl=document.getElementById(cdId);
   if(btn)btn.classList.add('cd');
   var r=sec;
-  if(cdEl)cdEl.textContent=r+'秒';
+  function fmt(s){
+    if(s>=60) return Math.floor(s/60)+'分'+( s%60>0 ? (s%60)+'秒' : '');
+    return s+'秒';
+  }
+  if(cdEl)cdEl.textContent='⏱ '+fmt(r)+'後';
   var iv=setInterval(function(){
     r--;
-    if(r<=0){clearInterval(iv);delete cds[btnId];if(btn)btn.classList.remove('cd');if(cdEl)cdEl.textContent='';}
-    else if(cdEl)cdEl.textContent=r+'秒';
+    if(r<=0){
+      clearInterval(iv);
+      delete cds[btnId];
+      if(btn)btn.classList.remove('cd');
+      if(cdEl)cdEl.textContent='';
+    } else {
+      if(cdEl)cdEl.textContent='⏱ '+fmt(r)+'後';
+    }
   },1000);
 }
 function floatDmg(dmg){
@@ -2501,6 +2511,8 @@ function loadUserData(data){
   streak = data.streak || 1;
   inventory = data.inventory || [];
   joinedRaidId = (data.joined_raid_id !== undefined && data.joined_raid_id !== null) ? data.joined_raid_id : null;
+  if(data.qr_settings && data.qr_settings.length > 0) qrSettings = data.qr_settings;
+  if(data.custom_exercises && data.custom_exercises.length > 0) customExercises = data.custom_exercises;
 }
 
 // Firestoreへデータ保存
@@ -2519,6 +2531,8 @@ function saveUserData(){
     streak: streak,
     inventory: inventory,
     joined_raid_id: joinedRaidId,
+    qr_settings: qrSettings,
+    custom_exercises: customExercises,
     updated_at: firebase.firestore.FieldValue.serverTimestamp()
   }, {merge: true}).catch(function(){});
 }
