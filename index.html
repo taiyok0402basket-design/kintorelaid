@@ -1190,7 +1190,8 @@ function removeSetItem(i){
 
 function changeSetItemAmount(i,dir){
   var it=_setItems[i];
-  var step=it.unit==='秒'||it.unit==='sec'?10:it.unit==='km'?1:5;
+  var u=it.unit||'回';
+  var step=u==='秒'||u==='sec'?10:u==='km'?1:5;
   it.amount=Math.max(step,it.amount+step*dir);
   rendSetItemsList();
 }
@@ -2362,11 +2363,10 @@ function rendMypage(){
   var customHtml=customExercises.length===0
     ? '<div style="font-size:12px;color:var(--t3);padding:10px 0">まだ自作種目がありません</div>'
     : customExercises.map(function(c,i){
-        var unitLabel=c.unit==='sec'?'秒':c.unit==='km'?'km':c.unit==='min'?'分':'回';
         return '<div class="qr-setting">'+
           '<div class="qrs-icon">✏️</div>'+
           '<div class="qrs-name">'+c.name+'</div>'+
-          '<div class="qrs-amount">'+c.defaultVal+unitLabel+'</div>'+
+          '<div class="qrs-amount">'+c.defaultVal+unitToLabel(c.unit)+'</div>'+
           '<button class="qrs-edit" onclick="editCustomEx('+i+')">編集</button>'+
           '<button class="qrs-edit" onclick="removeCustomEx('+i+')" style="color:var(--rd)">削除</button>'+
         '</div>';
@@ -2454,11 +2454,18 @@ function editCustomEx(i){
   _editingCustomExIdx = i;
   document.getElementById('custom-ex-name').value = c.name;
   document.getElementById('custom-ex-val').value = c.defaultVal;
-  document.getElementById('custom-ex-unit').value = c.unit || 'rep';
+  // 表示単位をselectの値に戻す
+  var unitRaw = c.unit==='回'?'rep':c.unit==='秒'?'sec':c.unit==='km'?'km':c.unit==='分'?'min':'rep';
+  document.getElementById('custom-ex-unit').value = unitRaw;
   document.getElementById('custom-ex-modal-title').textContent = '自作種目を編集';
   document.getElementById('custom-ex-modal-sub').textContent = c.name + ' の内容を変更できます';
   document.getElementById('custom-ex-save-btn').textContent = '変更を保存 ✓';
   document.getElementById('custom-ex-modal').classList.add('show');
+}
+
+// 単位の内部値→表示値変換
+function unitToLabel(u){
+  return u==='rep'?'回':u==='sec'?'秒':u==='km'?'km':u==='min'?'分':u||'回';
 }
 
 function saveCustomExercise(){
@@ -2467,23 +2474,21 @@ function saveCustomExercise(){
   var unitEl=document.getElementById('custom-ex-unit');
   var name=nameEl.value.trim();
   var val=parseInt(valEl.value)||0;
-  var unit=unitEl.value;
+  var unitRaw=unitEl.value; // 'rep','sec','km','min'
+  var unit=unitToLabel(unitRaw); // '回','秒','km','分'
   if(!name||val<=0){showToast('種目名と数値を入力してください');return;}
-  var dmgPer=unit==='km'?80:unit==='sec'?40:unit==='min'?80:50;
+  var dmgPer=unitRaw==='km'?80:unitRaw==='sec'?40:unitRaw==='min'?80:50;
   if(_editingCustomExIdx >= 0){
-    // 編集モード：既存を上書き
     var existing = customExercises[_editingCustomExIdx];
     existing.name = name;
     existing.defaultVal = val;
     existing.unit = unit;
     existing.dmgPer = dmgPer;
-    // qrSettingsに同じIDがあれば名前・量・単位も更新
     qrSettings.forEach(function(q){
       if(q.id === existing.id){q.name=name; q.amount=val; q.unit=unit;}
     });
     showToast(name+'を更新しました！');
   } else {
-    // 新規作成
     var id='custom_'+Date.now();
     customExercises.push({id:id,name:name,unit:unit,defaultVal:val,dmgPer:dmgPer});
     showToast(name+'を自作種目に追加しました！');
