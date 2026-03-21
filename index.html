@@ -391,8 +391,7 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
       <button onclick="goTo('record')" style="width:100%;background:var(--bg);border:.5px solid var(--bd2);border-radius:var(--rs);padding:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;margin-bottom:4px">📋 詳細記録を開く</button>
     </div>
     <div class="home-section" style="margin-top:4px">
-      <div class="sec-lbl">今日のレイド（3本開催中）</div>
-      <div id="home-raids"></div>
+      <div id="home-joined-raid"></div>
     </div>
     <div class="home-section" style="margin-top:4px">
       <div class="sec-lbl">みんなの活動</div>
@@ -625,6 +624,7 @@ body{margin:0;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--t
       <div id="admin-oneshot-btn" style="display:none;margin-top:12px">
         <div onclick="adminOneShotKill()" style="width:100%;background:#E24B4A;border-radius:14px;padding:13px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#fff;text-align:center;cursor:pointer">⚡ 管理者：一撃撃破</div>
       </div>
+      <div id="rd-join-btn" style="margin-top:10px"></div>
     </div>
     <div class="raid-participants">
       <div class="sec-lbl" style="margin-bottom:10px">参加中の仲間</div>
@@ -798,12 +798,22 @@ var exercises=[
 ];
 
 var raids=[
-  {id:0,icon:'🐉',bg:'#EAF3DE',name:'フォレストスライム',diff:'easy',diffLbl:'初級',minLv:1,maxHp:2000,hp:2000,parts:0,rewardXp:30,rewardRare:'コモン装備',lockMsg:''},
-  {id:1,icon:'👹',bg:'#FAEEDA',name:'アイアンゴブリン',diff:'mid',diffLbl:'中級',minLv:3,maxHp:5000,hp:5000,parts:0,rewardXp:50,rewardRare:'アンコモン装備',lockMsg:'Lv3で解放'},
-  {id:2,icon:'🐉',bg:'#FCEBEB',name:'フレイムドラゴン',diff:'hard',diffLbl:'上級',minLv:5,maxHp:10000,hp:10000,parts:0,rewardXp:80,rewardRare:'レア装備',lockMsg:'Lv5で解放'}
+  // 初級（Lv1〜）
+  {id:0,icon:'🐌',bg:'#EAF3DE',name:'フォレストスライム',  diff:'easy',diffLbl:'初級',minLv:1,maxHp:1500,hp:1500,parts:0,rewardXp:25,rewardRare:'コモン装備',lockMsg:''},
+  {id:1,icon:'🐸',bg:'#EAF3DE',name:'ぬかるみゴブリン',    diff:'easy',diffLbl:'初級',minLv:1,maxHp:2000,hp:2000,parts:0,rewardXp:30,rewardRare:'コモン装備',lockMsg:''},
+  {id:2,icon:'🦎',bg:'#EAF3DE',name:'石トカゲ',            diff:'easy',diffLbl:'初級',minLv:1,maxHp:2500,hp:2500,parts:0,rewardXp:35,rewardRare:'コモン/アンコモン装備',lockMsg:''},
+  // 中級（Lv3〜）
+  {id:3,icon:'👹',bg:'#FAEEDA',name:'アイアンゴブリン',    diff:'mid', diffLbl:'中級',minLv:3,maxHp:4000,hp:4000,parts:0,rewardXp:45,rewardRare:'アンコモン装備',lockMsg:'Lv3で解放'},
+  {id:4,icon:'🧟',bg:'#FAEEDA',name:'ダークゾンビ',        diff:'mid', diffLbl:'中級',minLv:3,maxHp:5000,hp:5000,parts:0,rewardXp:50,rewardRare:'アンコモン装備',lockMsg:'Lv3で解放'},
+  {id:5,icon:'🦁',bg:'#FAEEDA',name:'サンドライオン',      diff:'mid', diffLbl:'中級',minLv:3,maxHp:6000,hp:6000,parts:0,rewardXp:55,rewardRare:'アンコモン/レア装備',lockMsg:'Lv3で解放'},
+  // 上級（Lv5〜）
+  {id:6,icon:'🔥',bg:'#FCEBEB',name:'フレイムドラゴン',    diff:'hard',diffLbl:'上級',minLv:5,maxHp:8000,hp:8000,parts:0,rewardXp:70,rewardRare:'レア装備',lockMsg:'Lv5で解放'},
+  {id:7,icon:'⚡',bg:'#FCEBEB',name:'サンダーワイバーン',  diff:'hard',diffLbl:'上級',minLv:5,maxHp:10000,hp:10000,parts:0,rewardXp:80,rewardRare:'レア装備',lockMsg:'Lv5で解放'},
+  {id:8,icon:'💀',bg:'#FCEBEB',name:'デスナイト',          diff:'hard',diffLbl:'上級',minLv:5,maxHp:12000,hp:12000,parts:0,rewardXp:90,rewardRare:'レア確定',lockMsg:'Lv5で解放'},
 ];
-var myRaidDmg=[0,0,0];
+var myRaidDmg=[0,0,0,0,0,0,0,0,0];
 var raidLimit=500;
+var joinedRaidId=null; // 参加中のレイドID（nullなら未参加）
 
 var friends=[
   {id:1,av:'🦊',name:'mika',goal:'diet',goalLbl:'ダイエット',lv:4,activity:'今日：脚トレ達成',following:false,cheers:3},
@@ -959,22 +969,46 @@ function calcXp(id,amount){
 }
 
 function rendHomeRaids(){
-  var html='';
-  raids.forEach(function(r,i){
-    var pct=Math.round(r.hp/r.maxHp*100);
-    var locked=lv<r.minLv;
-    var hpClass=pct>50?'hp-mid':'hp-low';
-    html+='<div class="card raid-mini'+(locked?' rm-locked':'')+'" onclick="'+(locked?'':'openRaid('+i+')')+'">'+
-      '<div class="rm-icon" style="background:'+r.bg+'">'+r.icon+'</div>'+
-      '<div class="rm-info">'+
-        '<div class="rm-name">'+r.name+'</div>'+
-        '<div class="rm-badges"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span>'+(locked?'<span class="badge" style="background:var(--rl);color:#A32D2D">'+r.lockMsg+'</span>':'')+'</div>'+
-        '<div class="hp-track" style="height:5px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
+  var el=document.getElementById('home-joined-raid');
+  if(!el) return;
+  if(joinedRaidId===null){
+    // 未参加：参加を促す
+    el.innerHTML=
+      '<div style="background:var(--ca);border:.5px solid var(--bd);border-radius:var(--r);padding:16px;text-align:center">'+
+        '<div style="font-size:24px;margin-bottom:8px">⚔️</div>'+
+        '<div style="font-size:14px;font-weight:800;margin-bottom:4px">レイドに参加しよう</div>'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">参加中のレイドがあると、クイック記録のダメージが自動で送られます</div>'+
+        '<div onclick="goTo(\'raids\')" style="background:var(--g);border-radius:14px;padding:11px;font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:800;color:#fff;cursor:pointer">レイドを探す →</div>'+
+      '</div>';
+    return;
+  }
+  var r=raids[joinedRaidId];
+  if(!r){joinedRaidId=null;rendHomeRaids();return;}
+  var pct=Math.round(r.hp/r.maxHp*100);
+  var hpClass=pct>50?'hp-mid':'hp-low';
+  el.innerHTML=
+    '<div style="background:var(--ca);border:.5px solid var(--gb);border-radius:var(--r);overflow:hidden">'+
+      '<div style="background:linear-gradient(135deg,#1a3a0a,#2d6012);padding:12px 14px;display:flex;align-items:center;gap:10px">'+
+        '<div style="font-size:28px;width:44px;height:44px;background:'+r.bg+';border-radius:var(--rs);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+r.icon+'</div>'+
+        '<div style="flex:1">'+
+          '<div style="font-size:10px;font-weight:700;color:#C0DD97;margin-bottom:2px">⚔️ 参戦中レイド</div>'+
+          '<div style="font-size:16px;font-weight:900;color:#fff">'+r.name+'</div>'+
+          '<div style="font-size:11px;color:rgba(255,255,255,.7)">'+r.diffLbl+' · '+raidRemainingStr()+'</div>'+
+        '</div>'+
+        '<div onclick="openRaid('+joinedRaidId+')" style="font-size:11px;font-weight:800;color:#C0DD97;background:rgba(255,255,255,.15);padding:5px 10px;border-radius:99px;cursor:pointer">詳細 →</div>'+
       '</div>'+
-      '<div class="rm-time'+(r.hp/r.maxHp<0.2?' urgent':'')+'">HP '+pct+'%<br>'+raidRemainingStr()+'</div>'+
+      '<div style="padding:12px 14px">'+
+        '<div style="display:flex;justify-content:space-between;margin-bottom:5px">'+
+          '<span style="font-size:12px;font-weight:700">HP '+pct+'%</span>'+
+          '<span style="font-size:12px;color:var(--t3)">'+r.hp.toLocaleString()+' / '+r.maxHp.toLocaleString()+'</span>'+
+        '</div>'+
+        '<div class="hp-track" style="height:7px;margin-bottom:10px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div style="font-size:12px;color:var(--t2)">あなたの貢献: <strong style="color:var(--gm)">'+myRaidDmg[joinedRaidId]+'ダメ</strong></div>'+
+          '<div onclick="leaveRaid()" style="font-size:11px;font-weight:700;color:var(--t3);cursor:pointer;border:.5px solid var(--bd2);padding:4px 10px;border-radius:99px">離脱する</div>'+
+        '</div>'+
+      '</div>'+
     '</div>';
-  });
-  document.getElementById('home-raids').innerHTML=html;
 }
 
 function rendActivityFeed(){
@@ -1353,6 +1387,46 @@ function showRaidSelectModal(){
   document.getElementById('raid-select-modal').classList.add('show');
 }
 
+// レイドに参加登録（継続参加）
+function joinRaid(i){
+  var r=raids[i];
+  if(lv<r.minLv){showToast('Lv'+r.minLv+'以上で参加できます');return;}
+  joinedRaidId=i;
+  saveJoinedRaid();
+  document.getElementById('raid-select-modal').classList.remove('show');
+  showToast('⚔️ '+r.name+'に参加した！クイック記録でダメージを与えよう');
+  rendHome();
+}
+
+// 参加中レイドから離脱
+function leaveRaid(){
+  if(joinedRaidId===null) return;
+  var name=raids[joinedRaidId]?raids[joinedRaidId].name:'レイド';
+  joinedRaidId=null;
+  saveJoinedRaid();
+  showToast(name+'から離脱しました');
+  rendHome();
+}
+
+// 参加レイドをFirestoreに保存
+function saveJoinedRaid(){
+  if(!currentUid) return;
+  db.collection('users').doc(currentUid).set({joined_raid_id:joinedRaidId},{merge:true}).catch(function(){});
+}
+
+// 記録のダメージを参加中レイドへ自動送信
+function autoSendDmgToJoinedRaid(dmg){
+  if(joinedRaidId===null) return;
+  var i=joinedRaidId;
+  var r=raids[i];
+  if(!r||r.hp<=0) return;
+  var actual=Math.min(dmg,raidLimit-myRaidDmg[i]);
+  if(actual<=0) return;
+  myRaidDmg[i]+=actual;
+  updateRaidHpInFirestore(i,actual);
+  writeActivityLog('raid',r.name+'に'+actual+'ダメージ！',r.id);
+}
+
 function sendToRaid(i){
   var r=raids[i];
   if(lv<r.minLv)return;
@@ -1361,7 +1435,6 @@ function sendToRaid(i){
   document.getElementById('raid-select-modal').classList.remove('show');
   showToast(r.name+'に '+actual+'ダメージ！ 💥');
   writeActivityLog('raid', r.name+'に'+actual+'ダメージ！', r.id);
-  // Firestoreを更新（onSnapshotで全員に反映）
   updateRaidHpInFirestore(i, actual);
   pendingDmg=0;
   rendHome();
@@ -1710,27 +1783,48 @@ function cheerAction(name){showToast(name+'さんを応援しました💪');}
 
 // RAIDS LIST
 function rendRaidsList(){
+  var diffs=[
+    {key:'easy', lbl:'初級',color:'var(--g)', bg:'var(--gl)'},
+    {key:'mid',  lbl:'中級',color:'var(--am)',bg:'var(--al)'},
+    {key:'hard', lbl:'上級',color:'var(--rd)',bg:'var(--rl)'},
+  ];
   var html='';
-  raids.forEach(function(r,i){
-    var pct=Math.round(r.hp/r.maxHp*100);
-    var locked=lv<r.minLv;
-    var hpClass=pct>50?'hp-mid':'hp-low';
-    html+='<div class="card" style="margin-bottom:10px;padding:14px;cursor:'+(locked?'default':'pointer')+(locked?';opacity:.7':'')+'" onclick="'+(locked?'showToast(\''+r.lockMsg+'になると参加できます\')':'openRaid('+i+')')+'">'+
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
-        '<div style="width:56px;height:56px;border-radius:var(--rs);background:'+r.bg+';display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">'+r.icon+'</div>'+
-        '<div style="flex:1">'+
-          '<div style="font-size:16px;font-weight:800;margin-bottom:4px">'+r.name+'</div>'+
-          '<div style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge b-'+r.diff+'">'+r.diffLbl+'</span>'+(locked?'<span class="badge" style="background:var(--rl);color:#A32D2D">🔒 '+r.lockMsg+'</span>':'<span class="badge" style="background:var(--gl);color:var(--g)">参加可能</span>')+'</div>'+
+  diffs.forEach(function(d){
+    var group=raids.filter(function(r){return r.diff===d.key;});
+    var locked=lv<group[0].minLv;
+    html+='<div style="margin-bottom:6px">'+
+      '<div style="display:flex;align-items:center;gap:8px;padding:10px 0 6px">'+
+        '<div style="font-size:13px;font-weight:900;color:'+d.color+'">'+d.lbl+'</div>'+
+        (locked?'<span style="font-size:11px;font-weight:700;color:var(--t3)">🔒 Lv'+group[0].minLv+'で解放</span>':'<span style="font-size:11px;color:var(--t3)">'+group.length+'体開催中</span>')+
+      '</div>';
+    group.forEach(function(r,gi){
+      var i=raids.indexOf(r);
+      var pct=Math.round(r.hp/r.maxHp*100);
+      var hpClass=pct>50?'hp-mid':'hp-low';
+      var isJoined=joinedRaidId===i;
+      html+='<div style="background:var(--ca);border:.5px solid '+(isJoined?d.color:'var(--bd)')+';border-radius:var(--r);padding:14px;margin-bottom:8px;'+(locked?'opacity:.55':'cursor:pointer')+'" onclick="'+(locked?'showToast(\'Lv'+r.minLv+'以上で参加できます\')':'openRaid('+i+')')+'">'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+          '<div style="width:48px;height:48px;border-radius:var(--rs);background:'+r.bg+';display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">'+r.icon+'</div>'+
+          '<div style="flex:1">'+
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'+
+              '<div style="font-size:15px;font-weight:800">'+r.name+'</div>'+
+              (isJoined?'<span style="font-size:10px;font-weight:800;background:'+d.color+';color:#fff;padding:2px 7px;border-radius:99px">参戦中</span>':'')+
+            '</div>'+
+            '<div style="font-size:11px;color:var(--t2)">XP +'+r.rewardXp+' · '+r.rewardRare+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;flex-shrink:0">'+
+            '<div style="font-size:12px;font-weight:700">'+r.parts+'人</div>'+
+            '<div style="font-size:10px;color:var(--t3)">'+raidRemainingStr()+'</div>'+
+          '</div>'+
         '</div>'+
-        '<div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:700">'+r.parts+'人参加</div><div style="font-size:11px;color:var(--t3)">'+raidRemainingStr()+'</div></div>'+
-      '</div>'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;font-weight:700">HP '+pct+'%</span><span style="font-size:12px;color:var(--t3)">'+r.hp.toLocaleString()+' / '+r.maxHp.toLocaleString()+'</span></div>'+
-      '<div class="hp-track" style="height:6px;margin-bottom:10px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<div style="font-size:12px;color:var(--t2)">報酬：XP +'+r.rewardXp+' · '+r.rewardRare+'</div>'+
-        (locked?'<div style="font-size:12px;font-weight:700;color:var(--t3)">Lv'+r.minLv+'〜</div>':'<div style="font-size:12px;font-weight:700;color:var(--gm)">参加する →</div>')+
-      '</div>'+
-    '</div>';
+        '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
+          '<span style="font-size:11px;font-weight:700">HP '+pct+'%</span>'+
+          '<span style="font-size:11px;color:var(--t3)">'+r.hp.toLocaleString()+'/'+r.maxHp.toLocaleString()+'</span>'+
+        '</div>'+
+        '<div class="hp-track" style="height:5px"><div class="hp-fill '+hpClass+'" style="width:'+pct+'%"></div></div>'+
+      '</div>';
+    });
+    html+='</div>';
   });
   document.getElementById('raids-list').innerHTML=html;
 }
@@ -1774,6 +1868,22 @@ function openRaid(i){
   // 管理者ボタンの表示制御
   var adminBtn=document.getElementById('admin-oneshot-btn');
   if(adminBtn) adminBtn.style.display=isAdmin()?'block':'none';
+  // 参加・離脱ボタン
+  var joinBtn=document.getElementById('rd-join-btn');
+  if(joinBtn){
+    var isJoined=joinedRaidId===i;
+    var locked=lv<r.minLv;
+    if(locked){
+      joinBtn.innerHTML='<div style="width:100%;background:var(--bg);border-radius:14px;padding:12px;text-align:center;font-size:13px;font-weight:700;color:var(--t3)">🔒 Lv'+r.minLv+'で参加可能</div>';
+    } else if(isJoined){
+      joinBtn.innerHTML='<div style="display:flex;gap:8px">'+
+        '<div style="flex:1;background:var(--gl);border-radius:14px;padding:12px;text-align:center;font-size:13px;font-weight:800;color:var(--g)">✓ 参戦中</div>'+
+        '<div onclick="leaveRaid();goBack();" style="flex:1;background:var(--bg);border:.5px solid var(--bd2);border-radius:14px;padding:12px;text-align:center;font-size:13px;font-weight:700;color:var(--t3);cursor:pointer">離脱する</div>'+
+      '</div>';
+    } else {
+      joinBtn.innerHTML='<div onclick="joinRaid('+i+')" style="width:100%;background:var(--g);border-radius:14px;padding:13px;text-align:center;font-family:\'Nunito\',sans-serif;font-size:14px;font-weight:800;color:#fff;cursor:pointer">⚔️ このレイドに参加する</div>';
+    }
+  }
   goTo('raid');
 }
 
@@ -1963,6 +2073,7 @@ function addDmg(dmg,type,label,sets){
   logs.unshift({icon:exObj?exObj.icon:'💪',name:label||type,dmg:dmg,xp:calcXp(type,dmg),time:hh+':'+mm});
   saveUserData();
   addToDailyHistory(dmg,label||type,calcXp(type,dmg));
+  autoSendDmgToJoinedRaid(dmg);
   // 活動ログをFirestoreに書き込む
   writeActivityLog('workout', label+'を記録（'+dmg+'ダメ）');
 }
@@ -2204,7 +2315,7 @@ function doDeleteData(){
     lv=1; exp=0; streak=1; todayDmg=0; todayXp=0; todaySets=0;
     totalDmg=0; totalSets=0; nick='FitPanda'; avatar='🐼';
     userGoal='diet'; goalLabel='ダイエット';
-    logs=[]; myRaidDmg=[0,0,0]; currentUid=null; currentEmail=null; inventory=[];
+    logs=[]; myRaidDmg=[0,0,0,0,0,0,0,0,0]; currentUid=null; currentEmail=null; inventory=[]; joinedRaidId=null;
     if(activityUnsubscribe){activityUnsubscribe(); activityUnsubscribe=null;}
     if(friendsUnsubscribe){friendsUnsubscribe(); friendsUnsubscribe=null;}
     if(raidUnsubscribe){raidUnsubscribe(); raidUnsubscribe=null;}
@@ -2235,7 +2346,7 @@ function doLogout(){
     // 状態リセット
     lv=1; exp=0; streak=1; todayDmg=0; todayXp=0; todaySets=0;
     totalDmg=0; totalSets=0; nick='FitPanda'; avatar='🐼';
-    logs=[]; myRaidDmg=[0,0,0];
+    logs=[]; myRaidDmg=[0,0,0,0,0,0,0,0,0]; joinedRaidId=null;
     // ログイン画面に戻る
     document.querySelectorAll('.scr').forEach(function(s){s.classList.add('off');});
     var login = document.getElementById('s-login');
@@ -2313,6 +2424,7 @@ function loadUserData(data){
   totalSets = data.total_sets || 0;
   streak = data.streak || 1;
   inventory = data.inventory || [];
+  joinedRaidId = (data.joined_raid_id !== undefined && data.joined_raid_id !== null) ? data.joined_raid_id : null;
 }
 
 // Firestoreへデータ保存
@@ -2330,6 +2442,7 @@ function saveUserData(){
     total_sets: totalSets,
     streak: streak,
     inventory: inventory,
+    joined_raid_id: joinedRaidId,
     updated_at: firebase.firestore.FieldValue.serverTimestamp()
   }, {merge: true}).catch(function(){});
 }
@@ -2401,12 +2514,23 @@ function initRaidSync(){
   var raidRef=db.collection('daily_raids').doc(today);
   raidRef.get().then(function(doc){
     if(!doc.exists){
+      // 新規作成
       return raidRef.set({
         date:today,
         raids:raids.map(function(r){
           return {id:r.id,name:r.name,hp:r.maxHp,maxHp:r.maxHp,parts:0};
         })
       });
+    } else {
+      // 既存データが9体未満なら更新（古いスロットを埋める）
+      var existing=doc.data().raids||[];
+      if(existing.length < raids.length){
+        var merged=raids.map(function(r,i){
+          if(existing[i]) return existing[i];
+          return {id:r.id,name:r.name,hp:r.maxHp,maxHp:r.maxHp,parts:0};
+        });
+        return raidRef.update({raids:merged});
+      }
     }
   }).then(function(){
     if(raidUnsubscribe) raidUnsubscribe();
